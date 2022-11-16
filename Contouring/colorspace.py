@@ -24,8 +24,8 @@ def deduplicate_colors(image):
 
 
 def to_hsv_cylinder(pixels):
-    sines = [math.sin(math.radians(2 * a)) for a in range(0, 180)]
-    cosines = [math.cos(math.radians(2 * a)) for a in range(0, 180)]
+    sines = [math.sin(math.radians(2 * a)) for a in range(0, 180 + 1)]
+    cosines = [math.cos(math.radians(2 * a)) for a in range(0, 180 + 1)]
 
     for i, (h, s, v) in enumerate(pixels):
         pixels[i][0] = s * sines[int(h)]
@@ -33,8 +33,8 @@ def to_hsv_cylinder(pixels):
 
 
 def to_hsl_cylinder(pixels):
-    sines = [math.sin(math.radians(2 * a)) for a in range(0, 180)]
-    cosines = [math.cos(math.radians(2 * a)) for a in range(0, 180)]
+    sines = [math.sin(math.radians(2 * a)) for a in range(0, 180 + 1)]
+    cosines = [math.cos(math.radians(2 * a)) for a in range(0, 180 + 1)]
 
     for i, (h, l, s) in enumerate(pixels):
         pixels[i][0] = s * sines[int(h)]
