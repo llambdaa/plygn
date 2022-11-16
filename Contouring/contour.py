@@ -15,10 +15,10 @@ def denoise_bitmask(bitmask, kernel_size):
     return result
 
 
-def find_contours(image, centers, labels, kernel_size):
+def find_contours(image, cluster_count, labels, kernel_size):
     bitmask = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     contour_groups = list()
-    for k in range(len(centers)):
+    for k in range(cluster_count):
         # Each bitmask pixel assigned to center k
         # is marked white, else black
         bitmask[labels == k] = 255
@@ -38,8 +38,8 @@ def find_contours(image, centers, labels, kernel_size):
 def expand_contour(line):
     result = list()
     if len(line) < 3:
-    	return result
-    
+        return result
+
     vertices = list(map(lambda x: (x[0][0], x[0][1]), line))
     a = vertices[0]
 

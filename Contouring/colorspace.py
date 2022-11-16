@@ -2,9 +2,6 @@ import cv2
 import math
 import numpy as np
 
-from operator import itemgetter
-from itertools import groupby
-
 import plotly.express as px
 import plotly.graph_objects as go
 
@@ -20,7 +17,13 @@ class ColorSpace(Enum):
         return self.value
 
 
-def to_hsv_space(pixels):
+def deduplicate_colors(image):
+    data = image.reshape((-1, 3))
+    unique, counts = np.unique(data, axis=0, return_counts=True)
+    return unique, counts
+
+
+def to_hsv_cylinder(pixels):
     sines = [math.sin(math.radians(2 * a)) for a in range(0, 180)]
     cosines = [math.cos(math.radians(2 * a)) for a in range(0, 180)]
 
@@ -29,7 +32,7 @@ def to_hsv_space(pixels):
         pixels[i][1] = s * cosines[int(h)]
 
 
-def to_hsl_space(pixels):
+def to_hsl_cylinder(pixels):
     sines = [math.sin(math.radians(2 * a)) for a in range(0, 180)]
     cosines = [math.cos(math.radians(2 * a)) for a in range(0, 180)]
 
@@ -39,40 +42,24 @@ def to_hsl_space(pixels):
         pixels[i][2] = l
 
 
-def plot(image, space):
-    # The incoming image RGB color data is deduplicated
-    # and converted back to a 2D numpy array to be translated
-    plot_colors = image.reshape((-1, 3))
-    plot_colors = dict.fromkeys(map(tuple, plot_colors))
-    plot_colors = np.array(list(map(np.array, plot_colors)))
+def to_hsv(rgb):
+    rgb = rgb.reshape((len(rgb), 1, 3))
+    hsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
+    hsv = np.float32(hsv.reshape((-1, 3)))
+    return hsv
 
-    if space == ColorSpace.RGB:
-        space_colors = plot_colors
-    else:
-        # Reshape RGB data array for vectorized
-        # conversion into HSV/HSL color space
-        plot_colors = plot_colors.reshape((len(plot_colors), 1, 3))
-        match space:
-            case ColorSpace.HSV:
-                space_colors = cv2.cvtColor(plot_colors, cv2.COLOR_RGB2HSV)
-            case ColorSpace.HSL:
-                space_colors = cv2.cvtColor(plot_colors, cv2.COLOR_RGB2HLS)
 
-        # Transform both colors and HSV/HSL data
-        plot_colors = plot_colors.reshape((-1, 3))
-        space_colors = space_colors.reshape((-1, 3))
-        space_colors = np.float32(space_colors)
+def to_hsl(rgb):
+    rgb = rgb.reshape((len(rgb), 1, 3))
+    hsl = cv2.cvtColor(rgb, cv2.COLOR_RGB2HLS)
+    hsl = np.float32(hsl.reshape((-1, 3)))
+    return hsl
 
-        # Transform into HSV/HSL cylinder
-        match space:
-            case ColorSpace.HSV:
-                to_hsv_space(space_colors)
-            case ColorSpace.HSL:
-                to_hsl_space(space_colors)
 
+def plot(colors, points):
     # Transpose coordinate matrix to read
     # x, y and z coordinates row-wise
-    x, y, z = np.swapaxes(space_colors, 1, 0)
+    x, y, z = np.swapaxes(points, 1, 0)
     fig = go.Figure(data=[
         go.Scatter3d(
             x=x,
@@ -81,7 +68,7 @@ def plot(image, space):
             mode='markers',
             marker=dict(
                 size=3,
-                color=plot_colors,
+                color=colors,
             )
         )]
     )
@@ -93,20 +80,15 @@ def show(image):
     figure.show()
 
 
-def to_space(image, space):
-    if space == ColorSpace.RGB:
-        return np.float32(image.reshape((-1, 3)))
-
+def to_space(colors, space):
     match space:
         case ColorSpace.HSV:
-            image = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
-            data = np.float32(image.reshape((-1, 3)))
-            to_hsv_space(data)
+            data = to_hsv(colors)
+            to_hsv_cylinder(data)
         case ColorSpace.HSL:
-            image = cv2.cvtColor(image, cv2.COLOR_RGB2HLS)
-            data = np.float32(image.reshape((-1, 3)))
-            to_hsl_space(data)
+            data = to_hsl(colors)
+            to_hsl_cylinder(data)
         case _:
-            data = np.float32(image.reshape((-1, 3)))
+            return np.float32(colors)
 
     return data

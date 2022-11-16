@@ -53,27 +53,29 @@ if __name__ == '__main__':
     image = cv2.imread(in_path)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-    if flag_plot is True:
-        plot(image, color_space)
-
     # Transform image data to color space
     print(f"1. Color Space Transformation", end='\r')
     start = time()
     now = start
-    points = to_space(image, color_space)
+    deduplicated_colors, color_count = deduplicate_colors(image)
+    points = to_space(deduplicated_colors, color_space)
     print(f"1. Color Space Transformation \t{(time() - now).total_seconds()}s")
+
+    if flag_plot is True:
+        plot(deduplicated_colors, points)
 
     # Perform k-means clustering
     # (=> Palette Reduction)
     print(f"2. Color Clustering", end='\r')
     now = time()
-    centers, labels = kmeans(points, cluster_count, image.shape)
+    labels = kmeans(cluster_count, deduplicated_colors, color_count)
+    labels = expand_labels(deduplicated_colors, labels, image)
     print(f"2. Color Clustering \t\t{(time() - now).total_seconds()}s")
 
     # Contouring
     print(f"3. Contouring", end='\r')
     now = time()
-    contours = find_contours(image, centers, labels, bitmask_kernel)
+    contours = find_contours(image, cluster_count, labels, bitmask_kernel)
     print(f"3. Contouring \t\t\t{(time() - now).total_seconds()}s")
 
     if flag_contours is True:
