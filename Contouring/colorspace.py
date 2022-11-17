@@ -43,19 +43,21 @@ def to_hsv_cylinder(pixels):
 
 
 def to_hsl_cylinder(pixels):
-    # Trigonometry Lookup Table
-    sines = [math.sin(math.radians(2 * v)) for v in range(0, 180 + 1)]
-    cosines = [math.cos(math.radians(2 * v)) for v in range(0, 180 + 1)]
-
     # Transpose pixel matrix and
     # split into HSL channels
     length = len(pixels)
     pixels = np.swapaxes(pixels, 1, 0)
     h, l, s = pixels.copy()
 
+    # Translate Hue values into
+    # radians and calculate (co)sine
+    h = np.multiply(h, 2 * (math.pi/180))
+    sines = np.sin(h)
+    cosines = np.cos(h)
+
     # Calculate HSL coordinates
-    pixels[0] = [s[i] * sines[int(h[i])] for i in range(length)]
-    pixels[1] = [s[i] * cosines[int(h[i])] for i in range(length)]
+    pixels[0] = [s[i] * sines[i] for i in range(length)]
+    pixels[1] = [s[i] * cosines[i] for i in range(length)]
     pixels[2] = l
 
     # Transform pixel matrix back
