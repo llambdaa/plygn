@@ -120,7 +120,7 @@ def to_space(colors, space):
     match space:
         case ColorSpace.HSV:
             data = to_hsv(colors)
-            to_hsv_cylinder(data)
+            data = to_hsv_cylinder(data)
         case ColorSpace.HSL:
             data = to_hsl(colors)
             data = to_hsl_cylinder(data)
