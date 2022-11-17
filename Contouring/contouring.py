@@ -54,27 +54,27 @@ if __name__ == '__main__':
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
     # Transform image data to color space
-    print(f"1. Color Space Transformation", end='\r')
     start = time()
     now = start
-    deduplicated_colors, color_count = deduplicate_colors(image)
-    points = to_space(deduplicated_colors, color_space)
+    print(f"1. Color Space Transformation", end='\r')
+    deduped_colors, deduped_counts = dedupe_colors(image)
+    points = to_space(deduped_colors, color_space)
     print(f"1. Color Space Transformation \t{(time() - now).total_seconds()}s")
 
     if flag_plot is True:
-        plot(deduplicated_colors, points)
+        plot(deduped_colors, points)
 
     # Perform k-means clustering
     # (=> Palette Reduction)
-    print(f"2. Color Clustering", end='\r')
     now = time()
-    labels = kmeans(cluster_count, deduplicated_colors, color_count)
-    labels = expand_labels(deduplicated_colors, labels, image)
+    print(f"2. Color Clustering", end='\r')
+    labels = kmeans(cluster_count, points, deduped_counts)
+    labels = expand_labels(deduped_colors, labels, image)
     print(f"2. Color Clustering \t\t{(time() - now).total_seconds()}s")
 
     # Contouring
-    print(f"3. Contouring", end='\r')
     now = time()
+    print(f"3. Contouring", end='\r')
     contours = find_contours(image, cluster_count, labels, bitmask_kernel)
     print(f"3. Contouring \t\t\t{(time() - now).total_seconds()}s")
 
@@ -84,6 +84,7 @@ if __name__ == '__main__':
         show_contours(image, contours, gamma)
 
     # Triangulation
+    now = time()
     print(f"4. Vertex Search", end='\r')
     match vertex_method:
         case VertexMethod.EQUAL_SPACE:
@@ -92,6 +93,7 @@ if __name__ == '__main__':
             vertices = list()
     print(f"4. Vertex Search \t\t{(time() - now).total_seconds()}s")
 
+    now = time()
     print(f"5. Triangulation", end='\r')
     triangulation = find_triangulation(image.shape, vertices)
     if flag_triangulation is True:
@@ -101,6 +103,7 @@ if __name__ == '__main__':
     print(f"5. Triangulation \t\t{(time() - now).total_seconds()}s")
 
     # Coloring
+    now = time()
     print(f"6. Colorization", end='\r')
     result = colorize(image, triangulation)
     end = time()
@@ -109,6 +112,6 @@ if __name__ == '__main__':
     print(f"Total Elapsed: \t\t\t{(end - start).total_seconds()}s")
 
     cv2.imwrite(
-        f"{out_path}/finished.png",
+        f"{out_path}/finished.jpg",
         cv2.cvtColor(result, cv2.COLOR_RGB2BGR)
     )
