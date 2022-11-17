@@ -34,12 +34,25 @@ def deduplicate_colors(image):
 
 
 def to_hsv_cylinder(pixels):
-    sines = [math.sin(math.radians(2 * a)) for a in range(0, 180 + 1)]
-    cosines = [math.cos(math.radians(2 * a)) for a in range(0, 180 + 1)]
+    # Transpose pixel matrix and
+    # split into HSL channels
+    length = len(pixels)
+    pixels = np.swapaxes(pixels, 1, 0)
+    h, s, v = pixels.copy()
 
-    for i, (h, s, v) in enumerate(pixels):
-        pixels[i][0] = s * sines[int(h)]
-        pixels[i][1] = s * cosines[int(h)]
+    # Translate Hue values into
+    # radians and calculate (co)sine
+    h = np.multiply(h, 2 * (math.pi/180))
+    sines = np.sin(h)
+    cosines = np.cos(h)
+
+    # Calculate HSL coordinates
+    pixels[0] = [s[i] * sines[i] for i in range(length)]
+    pixels[1] = [s[i] * cosines[i] for i in range(length)]
+
+    # Transform pixel matrix back
+    pixels = np.swapaxes(pixels, 1, 0)
+    return pixels
 
 
 def to_hsl_cylinder(pixels):
