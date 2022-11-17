@@ -18,8 +18,18 @@ class ColorSpace(Enum):
 
 
 def deduplicate_colors(image):
-    data = image.reshape((-1, 3))
-    unique, counts = np.unique(data, axis=0, return_counts=True)
+    # Transform color channels (R, G, B)
+    # into integers for faster differentiation
+    r, g, b = cv2.split(image)
+    combined = (np.int32(b) << 16) + (np.int32(g) << 8) + np.int32(r)
+    combined = combined.reshape(-1)
+
+    # Determine unique colors (ints)
+    # and their frequency
+    unique, counts = np.unique(combined, return_counts=True)
+
+    # Transform back into channels
+    unique = unique.view(np.uint8).reshape(unique.shape + (4,))[..., :3]
     return unique, counts
 
 
