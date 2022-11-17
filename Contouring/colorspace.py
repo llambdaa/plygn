@@ -17,7 +17,7 @@ class ColorSpace(Enum):
         return self.value
 
 
-def deduplicate_colors(image):
+def dedupe_colors(image):
     # Transform color channels (R, G, B)
     # into integers for faster differentiation
     r, g, b = cv2.split(image)
