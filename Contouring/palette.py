@@ -1,16 +1,15 @@
 import cv2
+import faiss
 import numpy as np
-
-from sklearn.cluster import KMeans
 
 KMEANS_ITERATIONS = 100
 KMEANS_RUNS = 10
 
 
 def kmeans(clusters, points, weights):
-    process = KMeans(n_clusters=clusters, init='random', n_init=KMEANS_RUNS, max_iter=KMEANS_ITERATIONS)
-    process.fit(points, sample_weight=weights)
-    result = process.predict(points, sample_weight=weights)
+    process = faiss.Kmeans(d=points.shape[1], k=clusters, niter=KMEANS_ITERATIONS, nredo=KMEANS_RUNS)
+    process.train(points, weights)
+    result = process.index.search(points, 1)[1]
     return result
 
 
