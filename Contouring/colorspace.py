@@ -21,16 +21,16 @@ def dedupe_colors(image):
     # Transform color channels (R, G, B)
     # into integers for faster differentiation
     r, g, b = cv2.split(image)
-    combined = (np.int32(b) << 16) + (np.int32(g) << 8) + np.int32(r)
-    combined = combined.reshape(-1)
+    image_as_ints = (np.int32(b) << 16) + (np.int32(g) << 8) + np.int32(r)
+    image_as_ints = image_as_ints.reshape(-1)
 
     # Determine unique colors (ints)
     # and their frequency
-    unique, counts = np.unique(combined, return_counts=True)
+    unique_ints, unique_counts = np.unique(image_as_ints, return_counts=True)
 
-    # Transform back into channels
-    unique = unique.view(np.uint8).reshape(unique.shape + (4,))[..., :3]
-    return unique, counts
+    # Transform color ints back into channels
+    unique_colors = unique_ints.view(np.uint8).reshape(unique_ints.shape + (4,))[..., :3]
+    return image_as_ints, unique_ints, unique_colors, unique_counts
 
 
 def to_hsv_cylinder(pixels):

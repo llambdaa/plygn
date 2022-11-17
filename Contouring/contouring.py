@@ -57,19 +57,19 @@ if __name__ == '__main__':
     start = time()
     now = start
     print(f"1. Color Space Transformation", end='\r')
-    deduped_colors, deduped_counts = dedupe_colors(image)
-    points = to_space(deduped_colors, color_space)
+    image_as_ints, unique_ints, unique_colors, unique_counts = dedupe_colors(image)
+    translated_unique_colors = to_space(unique_colors, color_space)
     print(f"1. Color Space Transformation \t{(time() - now).total_seconds()}s")
 
     if flag_plot is True:
-        plot(deduped_colors, points)
+        plot(unique_colors, translated_unique_colors)
 
     # Perform k-means clustering
     # (=> Palette Reduction)
     now = time()
     print(f"2. Color Clustering", end='\r')
-    labels = kmeans(cluster_count, points, deduped_counts)
-    labels = expand_labels(deduped_colors, labels, image)
+    labels = kmeans(cluster_count, translated_unique_colors, unique_counts)
+    labels = expand_labels(image_as_ints, unique_ints, labels, image.shape)
     print(f"2. Color Clustering \t\t{(time() - now).total_seconds()}s")
 
     # Contouring
