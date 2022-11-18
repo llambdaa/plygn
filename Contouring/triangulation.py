@@ -2,6 +2,7 @@ import cv2
 import math
 
 from contour import *
+from scipy.spatial import Delaunay
 from enum import Enum
 
 TRIANGULATION_THICKNESS = 1
@@ -22,7 +23,7 @@ def find_vertices_equal_space(contour_groups, preferred_distance):
             # contour line. However, the points in
             # between them are needed and must be
             # interpolated
-            contour = expand_contour(contour)
+            ### contour = expand_contour(contour)
 
             # The contour must be long enough to
             # hold three distinct vertices
@@ -61,7 +62,7 @@ def find_vertices_equal_space(contour_groups, preferred_distance):
             # still is the only parameter to determine the amount
             # of vertices along a contour line.vertices
             for i in range(1, vertex_count + 1):
-                vertex = contour[(i * distance) - 1]
+                vertex = contour[(i * distance) - 1][0]
                 x = int(vertex[0])
                 y = int(vertex[1])
                 vertices.append((x, y))
@@ -70,6 +71,17 @@ def find_vertices_equal_space(contour_groups, preferred_distance):
 
 
 def find_triangulation(image_shape, vertices):
+    # Independent of the vertex method the corners
+    # of the image are counted as vertices too
+    height, width, _ = image_shape
+    corners = [(0, 0), (0, height - 1), (width - 1, 0), (width - 1, height - 1)]
+    vertices.extend(corners)
+
+    triangulation = Delaunay(np.array(vertices))
+    return triangulation.simplices
+
+
+def find_triangulation2(image_shape, vertices):
     height, width, _ = image_shape
     frame = cv2.Subdiv2D((0, 0, width, height))
 

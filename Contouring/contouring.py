@@ -105,7 +105,7 @@ if __name__ == '__main__':
     # Coloring
     now = time()
     print(f"6. Colorization", end='\r')
-    result = colorize(image, triangulation)
+    result = colorize(image, triangulation, vertices)
     end = time()
     print(f"6. Colorization \t\t{(end - now).total_seconds()}s")
     print(45 * "-")

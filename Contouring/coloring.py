@@ -40,9 +40,10 @@ def find_color(ymin, ymax, rows, image):
     return average
 
 
-def colorize(image, triangulation):
+def colorize(image, triangulation, vertices):
     canvas = image.copy()
-    for a, b, c in triangulation:
+    for triangle in triangulation:
+        a, b, c = vertices[triangle[0]], vertices[triangle[1]], vertices[triangle[2]]
         ymin, ymax, rows = find_bounds(a, b, c)
         color = find_color(ymin, ymax, rows, image)
 

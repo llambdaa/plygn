@@ -29,7 +29,7 @@ def find_contours(image, cluster_count, labels, kernel_size):
         if kernel_size > 0:
             bitmask = denoise_bitmask(bitmask, kernel_size)
 
-        contour_group, _ = cv2.findContours(bitmask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        contour_group, _ = cv2.findContours(bitmask, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
         contour_groups.append(contour_group)
 
     return contour_groups
