@@ -96,11 +96,12 @@ if __name__ == '__main__':
     now = time()
     print(f"5. Triangulation", end='\r')
     triangulation = find_triangulation(image.shape, vertices)
+    print(f"5. Triangulation \t\t{(time() - now).total_seconds()}s")
+
     if flag_triangulation is True:
         alpha = make_folder(out_path, image_name)
         gamma = make_folder(alpha, color_space)
-        show_triangulation(image, triangulation, gamma)
-    print(f"5. Triangulation \t\t{(time() - now).total_seconds()}s")
+        show_triangulation(image, triangulation, vertices, gamma)
 
     # Coloring
     now = time()

@@ -10,9 +10,9 @@ TRIANGULATION_COLOR = (0, 255, 0)
 
 
 class VertexMethod(Enum):
-    RANDOM = 0
-    EQUAL_SPACE = 1
-    VARIANCE = 2
+    EQUAL_SPACE = 0
+    VARIANCE = 1
+    RANDOM = 2
 
 
 def find_vertices_equal_space(contour_groups, preferred_distance):
@@ -75,38 +75,10 @@ def find_triangulation(image_shape, vertices):
     return triangulation.simplices
 
 
-def find_triangulation2(image_shape, vertices):
-    height, width, _ = image_shape
-    frame = cv2.Subdiv2D((0, 0, width, height))
-
-    # Perform triangulation and
-    # transform into more usable type
-    for vertex in vertices:
-        frame.insert(vertex)
-
-    # Independent of the vertex method the
-    # corners of the image are counted as
-    # vertices too
-    frame.insert((0, 0))
-    frame.insert((0, height - 1))
-    frame.insert((width - 1, 0))
-    frame.insert((width - 1, height - 1))
-
-    triangulation = frame.getTriangleList()
-    triangles = list()
-
-    for triangle in triangulation:
-        a = (int(triangle[0]), int(triangle[1]))
-        b = (int(triangle[2]), int(triangle[3]))
-        c = (int(triangle[4]), int(triangle[5]))
-        triangles.append((a, b, c))
-
-    return triangles
-
-
-def show_triangulation(image, triangles, out_path):
+def show_triangulation(image, triangles, vertices, out_path):
     result = image.copy()
-    for a, b, c in triangles:
+    for triangle in triangles:
+        a, b, c = vertices[triangle[0]], vertices[triangle[1]], vertices[triangle[2]]
         result = cv2.line(result, a, b, TRIANGULATION_COLOR, TRIANGULATION_THICKNESS)
         result = cv2.line(result, b, c, TRIANGULATION_COLOR, TRIANGULATION_THICKNESS)
         result = cv2.line(result, c, a, TRIANGULATION_COLOR, TRIANGULATION_THICKNESS)
