@@ -19,12 +19,6 @@ def find_vertices_equal_space(contour_groups, preferred_distance):
     vertices = list()
     for contour_group in contour_groups:
         for contour in contour_group:
-            # OpenCV only gives out the corners of a
-            # contour line. However, the points in
-            # between them are needed and must be
-            # interpolated
-            ### contour = expand_contour(contour)
-
             # The contour must be long enough to
             # hold three distinct vertices
             length = len(contour)

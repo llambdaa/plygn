@@ -78,11 +78,6 @@ if __name__ == '__main__':
     contours = find_contours(image, cluster_count, labels, bitmask_kernel)
     print(f"3. Contouring \t\t\t{(time() - now).total_seconds()}s")
 
-    if flag_contours is True:
-        alpha = make_folder(out_path, image_name)
-        gamma = make_folder(alpha, color_space)
-        show_contours(image, contours, gamma)
-
     # Triangulation
     now = time()
     print(f"4. Vertex Search", end='\r')
@@ -92,6 +87,11 @@ if __name__ == '__main__':
         case _:
             vertices = list()
     print(f"4. Vertex Search \t\t{(time() - now).total_seconds()}s")
+
+    if flag_contours is True:
+        alpha = make_folder(out_path, image_name)
+        gamma = make_folder(alpha, color_space)
+        show_contours(image, contours, gamma)
 
     now = time()
     print(f"5. Triangulation", end='\r')
