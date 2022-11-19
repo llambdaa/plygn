@@ -42,7 +42,10 @@ def find_color(ymin, ymax, rows, image):
 
 def colorize2(image, triangulation):
     canvas = image.copy()
-    for a, b, c in triangulation:
+    for x1, y1, x2, y2, x3, y3 in triangulation:
+        a = (int(x1), int(y1))
+        b = (int(x2), int(y2))
+        c = (int(x3), int(y3))
         ymin, ymax, rows = find_bounds(a, b, c)
         color = find_color(ymin, ymax, rows, image)
 
