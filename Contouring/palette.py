@@ -5,6 +5,7 @@ import numpy as np
 KMEANS_ITERATIONS = 100
 KMEANS_RUNS = 10
 
+from utils import *
 
 def kmeans(clusters, points, weights):
     process = faiss.Kmeans(d=points.shape[1], k=clusters, niter=KMEANS_ITERATIONS, nredo=KMEANS_RUNS)
@@ -26,6 +27,6 @@ def expand_labels(image_as_ints, unique_ints, labels, shape):
     # Its value is used to index the lookup table,
     # where each unique color stores its label.
     height, width, _ = shape
-    expanded = np.array([lookup[p] for p in image_as_ints])
+    expanded = np.take(lookup, image_as_ints)
     expanded = expanded.reshape((height, width))
     return expanded
