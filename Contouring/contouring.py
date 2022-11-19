@@ -101,12 +101,12 @@ if __name__ == '__main__':
     if flag_triangulation is True:
         alpha = make_folder(out_path, image_name)
         gamma = make_folder(alpha, color_space)
-        show_triangulation(image, triangulation, vertices, gamma)
+        show_triangulation(image, triangulation, gamma)
 
     # Coloring
     now = time()
     print(f"6. Colorization", end='\r')
-    result = colorize(image, triangulation, vertices)
+    result = colorize2(image, triangulation)
     end = time()
     print(f"6. Colorization \t\t{(end - now).total_seconds()}s")
     print(45 * "-")

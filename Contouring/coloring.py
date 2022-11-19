@@ -40,10 +40,9 @@ def find_color(ymin, ymax, rows, image):
     return average
 
 
-def colorize(image, triangulation, vertices):
+def colorize2(image, triangulation):
     canvas = image.copy()
-    for triangle in triangulation:
-        a, b, c = vertices[triangle[0]], vertices[triangle[1]], vertices[triangle[2]]
+    for a, b, c in triangulation:
         ymin, ymax, rows = find_bounds(a, b, c)
         color = find_color(ymin, ymax, rows, image)
 
@@ -53,3 +52,20 @@ def colorize(image, triangulation, vertices):
                 canvas[y][x] = color
 
     return canvas
+
+
+def colorize(image, triangulation):
+    # Triangle edges is rasterized to pixels using Bresenham's
+    # algorithm. Each edge is given an ID beforehand. That ID
+    # is written at each of the line's pixel locations in a
+    # helper array with the image's shape.
+    height, width, _ = image.shape
+    line_info = np.full((height, width), -1, dtype=np.int32)
+
+    triangles = triangulation.simplices
+    """
+    for a, b, c in triangles:
+        print(vertices[a], vertices[b], vertices[c])
+    """
+
+    pass

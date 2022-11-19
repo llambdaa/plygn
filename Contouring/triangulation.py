@@ -2,7 +2,6 @@ import cv2
 import math
 
 from contour import *
-from scipy.spatial import Delaunay
 from enum import Enum
 
 TRIANGULATION_THICKNESS = 1
@@ -65,20 +64,29 @@ def find_vertices_equal_space(contour_groups, preferred_distance):
 
 
 def find_triangulation(image_shape, vertices):
-    # Independent of the vertex method the corners
-    # of the image are counted as vertices too
     height, width, _ = image_shape
-    corners = [(0, 0), (0, height - 1), (width - 1, 0), (width - 1, height - 1)]
-    vertices.extend(corners)
+    frame = cv2.Subdiv2D((0, 0, width, height))
 
-    triangulation = Delaunay(np.array(vertices))
-    return triangulation.simplices
+    # Perform triangulation and
+    # transform into more usable type
+    for vertex in vertices:
+        frame.insert(vertex)
+
+    # Independent of the vertex method the
+    # corners of the image are counted as
+    # vertices too
+    frame.insert((0, 0))
+    frame.insert((0, height - 1))
+    frame.insert((width - 1, 0))
+    frame.insert((width - 1, height - 1))
+
+    triangulation = frame.getTriangleList()
+    return triangulation
 
 
-def show_triangulation(image, triangles, vertices, out_path):
+def show_triangulation(image, triangles, out_path):
     result = image.copy()
-    for triangle in triangles:
-        a, b, c = vertices[triangle[0]], vertices[triangle[1]], vertices[triangle[2]]
+    for a, b, c in triangles:
         result = cv2.line(result, a, b, TRIANGULATION_COLOR, TRIANGULATION_THICKNESS)
         result = cv2.line(result, b, c, TRIANGULATION_COLOR, TRIANGULATION_THICKNESS)
         result = cv2.line(result, c, a, TRIANGULATION_COLOR, TRIANGULATION_THICKNESS)
