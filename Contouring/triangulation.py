@@ -80,16 +80,16 @@ def find_triangulation(image_shape, vertices):
     frame.insert((width - 1, 0))
     frame.insert((width - 1, height - 1))
 
-    triangulation = frame.getTriangleList()
+    triangulation = np.int32(frame.getTriangleList())
     return triangulation
 
 
 def show_triangulation(image, triangles, out_path):
     result = image.copy()
     for x1, y1, x2, y2, x3, y3 in triangles:
-        a = (int(x1), int(y1))
-        b = (int(x2), int(y2))
-        c = (int(x3), int(y3))
+        a = (x1, y1)
+        b = (x2, y2)
+        c = (x3, y3)
         result = cv2.line(result, a, b, TRIANGULATION_COLOR, TRIANGULATION_THICKNESS)
         result = cv2.line(result, b, c, TRIANGULATION_COLOR, TRIANGULATION_THICKNESS)
         result = cv2.line(result, c, a, TRIANGULATION_COLOR, TRIANGULATION_THICKNESS)
