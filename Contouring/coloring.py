@@ -58,17 +58,49 @@ def colorize2(image, triangulation):
 
 
 def colorize(image, triangulation):
-    # Triangle edges is rasterized to pixels using Bresenham's
-    # algorithm. Each edge is given an ID beforehand. That ID
-    # is written at each of the line's pixel locations in a
-    # helper array with the image's shape.
     height, width, _ = image.shape
-    line_info = np.full((height, width), -1, dtype=np.int32)
+    line_info = get_line_info(width, height, triangulation)
 
-    triangles = triangulation.simplices
-    """
-    for a, b, c in triangles:
-        print(vertices[a], vertices[b], vertices[c])
-    """
 
-    pass
+def get_line_info(width, height, triangulation):
+    line_info_matrix = np.full((height, width), -1, dtype=np.int32)
+    for triangle in triangulation:
+        pass
+
+
+def order_vertices(coordinates):
+    x1, y1, x2, y2, x3, y3 = coordinates
+    # Order vertices by x coordinate
+    if x1 > x2:
+        x2, y2, x1, y1 = x1, y1, x2, y2
+
+    if x2 > x3:
+        x3, y3, x2, y2 = x2, y2, x3, y3
+
+    if x1 > x2:
+        x2, y2, x1, y1 = x1, y1, x2, y2
+
+    if x2 == x3:
+        # The two rightmost vertices are on the same
+        # x-level. The upper is 'c', the lower is 'b'
+        ax, ay = x1, y1
+        if y3 < y2:
+            cx, cy = x3, y3
+            bx, by = x2, y2
+        else:
+            cx, cy = x2, y2
+            bx, by = x3, y3
+    elif x1 == x2:
+        # The two leftmost vertices are on the same
+        # x-level. The upper is 'a', the lower is 'b'
+        cx, cy = x3, y3
+        if y1 < y2:
+            ax, ay = x1, y1
+            bx, by = x2, y2
+        else:
+            ax, ay = x2, y2
+            bx, by = x1, x1
+    else:
+        ax, ay, bx, by, cx, cy = x1, y1, x2, y2, x3, y3
+    return ax, ay, bx, by, cx, cy
+
