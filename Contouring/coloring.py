@@ -5,6 +5,7 @@ import numpy as np
 from palette import *
 from bresenham import *
 
+from utils import *
 
 def find_bounds(a, b, c):
     # The pixels along the edges of the triangle
@@ -63,9 +64,14 @@ def colorize(image, triangulation):
 
 
 def get_line_info(width, height, triangulation):
+    # Each triangle's vertices are ordered, so that there
+    # are two leftmost vertices 'a' and 'b' and a rightmost
+    # vertex 'c'. The latter defines which edges must be
+    # drawn to the line info matrix, because the triangle
+    # is right to them.
     line_info_matrix = np.full((height, width), -1, dtype=np.int32)
     for triangle in triangulation:
-        pass
+        ax, ay, bx, by, cx, cy = order_vertices(triangle)
 
 
 def order_vertices(coordinates):
@@ -81,26 +87,15 @@ def order_vertices(coordinates):
         x2, y2, x1, y1 = x1, y1, x2, y2
 
     if x2 == x3:
-        # The two rightmost vertices are on the same
-        # x-level. The upper is 'c', the lower is 'b'
-        ax, ay = x1, y1
-        if y3 < y2:
-            cx, cy = x3, y3
-            bx, by = x2, y2
-        else:
-            cx, cy = x2, y2
-            bx, by = x3, y3
-    elif x1 == x2:
-        # The two leftmost vertices are on the same
-        # x-level. The upper is 'a', the lower is 'b'
-        cx, cy = x3, y3
-        if y1 < y2:
-            ax, ay = x1, y1
-            bx, by = x2, y2
-        else:
-            ax, ay = x2, y2
-            bx, by = x1, x1
-    else:
-        ax, ay, bx, by, cx, cy = x1, y1, x2, y2, x3, y3
-    return ax, ay, bx, by, cx, cy
+        # The two rightmost vertices are on the same x-level.
+        # The upper vertex is 'c', the lower is 'b'.
+        if y2 < y3:
+            x3, y3, x2, y2 = x2, y2, x3, y3
 
+    if y1 != y2 and x1 != x2:
+        # The two leftmost vertices are not on the same y-level.
+        # Then, vertex 'a' is the upper one, 'b' the lower one.
+        if y1 > y2:
+            x2, y2, x1, y1 = x1, y1, x2, y2
+
+    return x1, y1, x2, y2, x3, y3
