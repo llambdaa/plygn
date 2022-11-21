@@ -4,8 +4,6 @@ import numpy as np
 CONTOUR_THICKNESS = 1
 CONTOUR_COLOR = (255, 0, 255)
 
-from utils import *
-
 
 def denoise_bitmask(bitmask, kernel_size):
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
