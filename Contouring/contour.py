@@ -4,6 +4,8 @@ import numpy as np
 CONTOUR_THICKNESS = 1
 CONTOUR_COLOR = (255, 0, 255)
 
+from utils import *
+
 
 def denoise_bitmask(bitmask, kernel_size):
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
@@ -20,8 +22,8 @@ def find_contours(image, cluster_count, labels, kernel_size):
     for k in range(cluster_count):
         # Each bitmask pixel assigned to center k
         # is marked white, else black
+        bitmask.fill(0)
         bitmask[labels == k] = 255
-        bitmask[labels != k] = 0
 
         # If a denoise kernel size is given
         # the bitmask gets denoised
