@@ -5,7 +5,6 @@ import numpy as np
 from palette import *
 from bresenham import *
 
-from utils import *
 
 def find_bounds(a, b, c):
     # The pixels along the edges of the triangle
@@ -58,20 +57,39 @@ def colorize2(image, triangulation):
     return canvas
 
 
-def colorize(image, triangulation):
+def colorize3(image, triangulation):
     height, width, _ = image.shape
-    line_info = get_line_info(width, height, triangulation)
+    line_info_matrix = get_line_info_matrix(width, height, triangulation)
 
 
-def get_line_info(width, height, triangulation):
+def get_line_info_matrix(width, height, triangulation):
     # Each triangle's vertices are ordered, so that there
     # are two leftmost vertices 'a' and 'b' and a rightmost
     # vertex 'c'. The latter defines which edges must be
     # drawn to the line info matrix, because the triangle
     # is right to them.
     line_info_matrix = np.full((height, width), -1, dtype=np.int32)
-    for triangle in triangulation:
+    for index, triangle in enumerate(triangulation):
+        # The triangle's vertices are
+        # ordered for easier checks.
         ax, ay, bx, by, cx, cy = order_vertices(triangle)
+
+        if cy >= by:
+            # Vertex 'c' below both other vertices
+            points = np.array([[ax, ay], [bx, by], [cx, cy]], dtype=np.int32)
+
+        elif cy <= ay:
+            # Vertex 'c' above both other vertices
+            if ax > bx:
+                points = np.array([[bx, by], [cx, cy]], dtype=np.int32)
+            else:
+                points = np.array([[bx, by], [ax, ay], [cx, cy]], dtype=np.int32)
+
+        else:
+            # Vertex 'c' between both other vertices
+            points = np.array([[ax, ay], [bx, by]], dtype=np.int32)
+
+        cv2.polylines(line_info_matrix, [points], False, index, thickness=1)
 
 
 def order_vertices(coordinates):
