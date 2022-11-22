@@ -59,21 +59,22 @@ def colorize2(image, triangulation):
 
 def colorize(image, triangulation):
     # The triangle vertices are transformed into indices of
-    # the 1D representation of the image they are placed in.
-    # Then, those index representations are sorted.
+    # the image's 1D representation they are placed in. Then,
+    # those indices are sorted, which is especially fast,
+    # because only integers are sorted, not structures.
     height, width, _ = image.shape
-    i1, i2, i3 = to_indices(width, triangulation)
+    i1, i2, i3 = to_sorted_indices(width, triangulation)
 
-    # Then, the sorted vertex indices are transformed into
-    # index differences. The differences describe the relative
-    # positioning of the vertices in the image and thus the
-    # concrete triangle shape.
-    differences = to_differences(i1, i2, i3)
+    # The sorted vertices (in index format) are translated
+    # back to x- and y-coordinates. The vectors between those
+    # points are calculated and packed into an integer.
+    # Now, the whole shape is uniquely identified by an int.
+    vector_identifiers = to_vector_identifiers(width, i1, i2, i3)
 
-    # The indices of duplicate difference representations of
-    # triangles are grouped.
-    groups = group_duplicates(differences)
-    
+    # The indices of duplicate triangle vector identifiers
+    # are grouped.
+    groups = group_duplicates(vector_identifiers)
+
     """
     1) For the unique triangles (always first element of a group)
        the offsets that lie within the triangle must be found.
@@ -118,55 +119,99 @@ def colorize(image, triangulation):
     """
 
 
-def to_indices(width, triangulation):
+def to_sorted_indices(width, triangulation):
+    """
+    Transforming points into indices in the image allows for sorting them in ascending order.
+    That gives a point of reference. Two triangles with the same shape - no matter where they
+    are placed in the image - will have their vertices sorted the same way, resulting in the
+    same vectors between the vertices.
+    ------------------------------------------------------------------------------------------
+    It is faster to calculate an index of two arrays holding x- and y-coordinates, than it is
+    to make tuples out of those coordinate arrays and then sorting them by x- and y-value to
+    have a point of reference for calculating the vectors. Swapping and overwriting integers
+    (indices) is much cheaper than swapping two objects (tuples).
+
+    However, that approach comes with the downside, that x and y must be recalculated from
+    the sorted indices for the vector calculation. But since that is a simple and vectorized
+    mathematical operation (numpy), this is not a problem.
+    """
     # The triangulation result (matrix) is transposed and
-    # the corresponding x- and y-coordinates are extracted
+    # corresponding x- and y-coordinates are extracted
     triangulation = triangulation.T
     x1, y1, x2, y2, x3, y3 = triangulation
 
     # The indices are calculated using:
     #   i = y * width + x
-    y1 = np.multiply(y1, width)
-    y2 = np.multiply(y2, width)
-    y3 = np.multiply(y3, width)
+    yw1 = np.multiply(y1, width)
+    yw2 = np.multiply(y2, width)
+    yw3 = np.multiply(y3, width)
 
-    i1 = np.add(x1, y1)
-    i2 = np.add(x2, y2)
-    i3 = np.add(x3, y3)
+    i1 = np.add(x1, yw1)
+    i2 = np.add(x2, yw2)
+    i3 = np.add(x3, yw3)
 
     # The vertex indices are combined again, so that
     # the three vertices of a triangle (contained in
     # i1, i2 and i3 respectively) can be sorted in
     # ascending order.
     stacked = np.column_stack((i1, i2, i3))
-    sorted = np.sort(stacked, axis=1)
-    i1, i2, i3 = sorted.T
-
+    stacked = np.sort(stacked, axis=1)
+    i1, i2, i3 = stacked.T
     return i1, i2, i3
 
 
-def to_differences(i1, i2, i3):
-    d1 = np.uint64(np.subtract(i2, i1))
-    d2 = np.uint64(np.subtract(i3, i2))
+def to_vector_identifiers(width, i1, i2, i3):
+    """
+    The shape of a triangle is uniquely identifiable in 2D space by the vectors 'ab' and 'bc'.
+    Sorting the indices gives a point of reference, about which vertex to call 'a', 'b' or 'c'
+    respectively. However, the indices must be decomposed into its x- and y-component.
 
-    # The differences 'ab' and 'bc' are combined into
-    # one 64-bit int, which describes the triangle's shape
-    differences = np.add(np.left_shift(d2, 32), d1)
-    return differences
+    After that, the vectors (x and y deltas) between the vertices can be calculated easily.
+    The deltas (there are four of them) are then packed into an integer. Now, an 64-bit int
+    uniquely identifies a triangle shape. Comparing those int representations is extremely
+    fast, making it easy to detect duplicate triangle shapes and ruling out unnecessary work.
+    """
+    # The sorted indices must now each be decomposed
+    # into the contained x- and y-coordinate.
+    # They can be found using these formulas:
+    #   i = y * width + x   <=>
+    #   y = (i - x) / width
+    #     = floor(i / width)    [x is rounded away]
+    #   x = i - y * width
+    y1 = np.floor_divide(i1, width).astype(np.uint16)
+    y2 = np.floor_divide(i2, width).astype(np.uint16)
+    y3 = np.floor_divide(i3, width).astype(np.uint16)
+
+    yw1 = np.multiply(y1, width)
+    yw2 = np.multiply(y2, width)
+    yw3 = np.multiply(y3, width)
+    x1 = np.subtract(i1, yw1).astype(np.uint16)
+    x2 = np.subtract(i2, yw2).astype(np.uint16)
+    x3 = np.subtract(i3, yw3).astype(np.uint16)
+
+    # Per definition, 'a' is the first vertex, the second
+    # is 'b' and the last is 'c'.
+    abx = np.subtract(x2, x1).astype(np.uint64)
+    aby = np.subtract(y2, y1).astype(np.uint64)
+    bcx = np.subtract(x3, x2).astype(np.uint64)
+    bcy = np.subtract(y3, y2).astype(np.uint64)
+
+    vector_identifiers = (abx << 48) + (aby << 32) + (bcx << 16) + bcy
+    return vector_identifiers
 
 
-def group_duplicates(differences):
+def group_duplicates(identifiers):
     # First, the input array is sorted, returning another
     # array of the original indices that the sorted elements
     # had in the input array. Then, the input array is sorted
     # using these very indices.
-    sorted_indices = np.argsort(differences)
-    sorted_differences = differences[sorted_indices]
+    sorted_indices = np.argsort(identifiers)
+    sorted_identifiers = identifiers[sorted_indices]
 
     # Then, the array is deduplicated and the indices of the
     # unique values' first occurrences along with their count
     # are returned.
-    _, index_starts, _ = np.unique(sorted_differences, return_index=True, return_counts=True)
+    _, index_starts = np.unique(sorted_identifiers, return_index=True)
 
     # Lastly, the index array is split along those delimiters.
     # The fragments will hold the indices of the sorted elements
