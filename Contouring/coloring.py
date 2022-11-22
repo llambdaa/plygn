@@ -57,63 +57,54 @@ def colorize2(image, triangulation):
     return canvas
 
 
-def colorize3(image, triangulation):
+def colorize(image, triangulation):
+    # The triangle vertices are transformed into indices of
+    # the 1D representation of the image they are placed in.
+    # Then, those index representations are sorted.
     height, width, _ = image.shape
-    line_info_matrix = get_line_info_matrix(width, height, triangulation)
+    i1, i2, i3 = to_indices(width, triangulation)
+
+    # Then, the sorted vertex indices are transformed into
+    # index differences. The differences describe the relative
+    # positioning of the vertices in the image and thus the
+    # concrete triangle shape.
+    differences = to_differences(i1, i2, i3)
+    unique_differences = np.unique(differences, return_index=True)
 
 
-def get_line_info_matrix(width, height, triangulation):
-    # Each triangle's vertices are ordered, so that there
-    # are two leftmost vertices 'a' and 'b' and a rightmost
-    # vertex 'c'. The latter defines which edges must be
-    # drawn to the line info matrix, because the triangle
-    # is right to them.
-    line_info_matrix = np.full((height, width), -1, dtype=np.int32)
-    for index, triangle in enumerate(triangulation):
-        # The triangle's vertices are
-        # ordered for easier checks.
-        ax, ay, bx, by, cx, cy = order_vertices(triangle)
+def to_indices(width, triangulation):
+    # The triangulation result (matrix) is transposed and
+    # the corresponding x- and y-coordinates are extracted
+    triangulation = triangulation.T
+    x1, y1, x2, y2, x3, y3 = triangulation
 
-        if cy >= by:
-            # Vertex 'c' below both other vertices
-            points = np.array([[ax, ay], [bx, by], [cx, cy]], dtype=np.int32)
+    # The indices are calculated using:
+    #   i = y * width + x
+    y1 = np.multiply(y1, width)
+    y2 = np.multiply(y2, width)
+    y3 = np.multiply(y3, width)
 
-        elif cy <= ay:
-            # Vertex 'c' above both other vertices
-            if ax > bx:
-                points = np.array([[bx, by], [cx, cy]], dtype=np.int32)
-            else:
-                points = np.array([[bx, by], [ax, ay], [cx, cy]], dtype=np.int32)
+    i1 = np.add(x1, y1)
+    i2 = np.add(x2, y2)
+    i3 = np.add(x3, y3)
 
-        else:
-            # Vertex 'c' between both other vertices
-            points = np.array([[ax, ay], [bx, by]], dtype=np.int32)
+    # The vertex indices are combined again, so that
+    # the three vertices of a triangle (contained in
+    # i1, i2 and i3 respectively) can be sorted in
+    # ascending order.
+    stacked = np.column_stack((i1, i2, i3))
+    sorted = np.sort(stacked, axis=1)
+    i1, i2, i3 = sorted.T
 
-        cv2.polylines(line_info_matrix, [points], False, index, thickness=1)
+    return i1, i2, i3
 
 
-def order_vertices(coordinates):
-    x1, y1, x2, y2, x3, y3 = coordinates
-    # Order vertices by x coordinate
-    if x1 > x2:
-        x2, y2, x1, y1 = x1, y1, x2, y2
+def to_differences(i1, i2, i3):
+    d1 = np.uint64(np.subtract(i2, i1))
+    d2 = np.uint64(np.subtract(i3, i2))
 
-    if x2 > x3:
-        x3, y3, x2, y2 = x2, y2, x3, y3
+    # The differences 'ab' and 'bc' are combined into
+    # one 64-bit int, which describes the triangle's shape
+    differences = np.add(np.left_shift(d2, 32), d1)
+    return differences
 
-    if x1 > x2:
-        x2, y2, x1, y1 = x1, y1, x2, y2
-
-    if x2 == x3:
-        # The two rightmost vertices are on the same x-level.
-        # The upper vertex is 'c', the lower is 'b'.
-        if y2 < y3:
-            x3, y3, x2, y2 = x2, y2, x3, y3
-
-    if y1 != y2 and x1 != x2:
-        # The two leftmost vertices are not on the same y-level.
-        # Then, vertex 'a' is the upper one, 'b' the lower one.
-        if y1 > y2:
-            x2, y2, x1, y1 = x1, y1, x2, y2
-
-    return x1, y1, x2, y2, x3, y3
