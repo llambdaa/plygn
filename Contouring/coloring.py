@@ -69,7 +69,11 @@ def colorize(image, triangulation):
     # positioning of the vertices in the image and thus the
     # concrete triangle shape.
     differences = to_differences(i1, i2, i3)
-    unique_differences = np.unique(differences, return_index=True)
+
+    # The indices of duplicate difference representations of
+    # triangles are grouped and unique differences (triangles)
+    # are returned.
+    unique, groups = group_duplicates(differences)
 
 
 def to_indices(width, triangulation):
@@ -108,3 +112,22 @@ def to_differences(i1, i2, i3):
     differences = np.add(np.left_shift(d2, 32), d1)
     return differences
 
+
+def group_duplicates(differences):
+    # First, the input array is sorted, returning another
+    # array of the original indices that the sorted elements
+    # had in the input array. Then, the input array is sorted
+    # using these very indices.
+    sorted_indices = np.argsort(differences)
+    sorted_differences = differences[sorted_indices]
+
+    # Then, the array is deduplicated and the indices of the
+    # unique values' first occurrences along with their count
+    # are returned.
+    unique_values, index_starts, counts = np.unique(sorted_differences, return_index=True, return_counts=True)
+
+    # Lastly, the index array is split along those delimiters.
+    # The fragments will hold the indices of the sorted elements
+    # into the original input array.
+    groups = np.split(sorted_indices, index_starts[1:])
+    return unique_values, groups
