@@ -71,9 +71,51 @@ def colorize(image, triangulation):
     differences = to_differences(i1, i2, i3)
 
     # The indices of duplicate difference representations of
-    # triangles are grouped and unique differences (triangles)
-    # are returned.
-    unique, groups = group_duplicates(differences)
+    # triangles are grouped.
+    groups = group_duplicates(differences)
+    
+    """
+    1) For the unique triangles (always first element of a group)
+       the offsets that lie within the triangle must be found.
+       That can be done by determining a bounding box (or a sequence
+       of indices) that fully contains all possible pixels inside a
+       triangle. Then, using vectorized operations, the barycentric
+       coordinate scalars can be computed. Using a logical operation
+       using numpy, the locations in the window where certain conditions
+       are met, are collected into a list.
+    
+    2) Now, after finding all 1D pixel locations offset from the lowest
+       index of a triangle, a first lookup table is built. At each index
+       of a unique triangle, it holds a list or array of those offsets of
+       this very triangle.
+    
+    3) A second lookup table is now being built. For each triangle (or its
+       representation) an array entry is created. It holds the index of the
+       corresponding unique triangle, of which it is a duplicate. The
+       information which unique triangle represents which duplicates is stored
+       in the 'groups' data structure. 
+       
+    4) Then, another array is constructed. It holds for each triangle at its
+       index another array or list that contains the offsets starting from the
+       minimum index of the triangle. That can be calculated using vectorized
+       operations. Now, we have a huge 2D data structure that contains all
+       concrete indices in the 1D image for each triangle, where the pixel data
+       shall be retrieved from and be replaced at.
+    
+    5) The array is used to retrieve the pixel values at those indices using
+       vectorized operations. Either that array stays 2D (slower access) or
+       it is converted to one 1D array, but then the resulting pixel value
+       array must be split according to the amount of pixels within one triangle
+       in order to group the retrieved pixel values by triangle again.
+       Theoretically, the amount of pixels inside a triangle is known.
+    
+    6) The averages of those pixel groups is calculated. That average will
+       occur as many times as there are indices for a triangle, so that using
+       the 1D version of the index array, the colors can be written directly into
+       the image (numpy.put)
+       
+    7) The image is converted back to 2D, so that is can be written out.
+    """
 
 
 def to_indices(width, triangulation):
@@ -124,10 +166,10 @@ def group_duplicates(differences):
     # Then, the array is deduplicated and the indices of the
     # unique values' first occurrences along with their count
     # are returned.
-    unique_values, index_starts, counts = np.unique(sorted_differences, return_index=True, return_counts=True)
+    _, index_starts, _ = np.unique(sorted_differences, return_index=True, return_counts=True)
 
     # Lastly, the index array is split along those delimiters.
     # The fragments will hold the indices of the sorted elements
     # into the original input array.
     groups = np.split(sorted_indices, index_starts[1:])
-    return unique_values, groups
+    return groups
