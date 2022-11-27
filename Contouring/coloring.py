@@ -1,6 +1,6 @@
 import cv2
-import numpy
 import numpy as np
+import numba
 
 from palette import *
 from bresenham import *
@@ -57,7 +57,9 @@ def colorize2(image, triangulation):
     return canvas
 
 
+@njit
 def colorize(image, triangulation):
+    """
     # The triangle vertices are transformed into indices of
     # the image's 1D representation they are placed in. Then,
     # those indices are sorted, which is especially fast,
@@ -71,9 +73,14 @@ def colorize(image, triangulation):
     # Now, the whole shape is uniquely identified by an int.
     vector_identifiers = to_vector_identifiers(width, i1, i2, i3)
 
-    # The indices of duplicate triangle vector identifiers
-    # are grouped.
+    # Indices of duplicate triangle vector identifiers are grouped.
+    # The first element of each triangle is defined to be the unique
+    # triangle of that group, the other elements are duplicates.
     groups = group_duplicates(vector_identifiers)
+    unique_triangle_indices = np.array([group[0] for group in groups])
+
+    indices_inside = get_indices_inside(triangulation, unique_triangle_indices)
+    """
 
     """
     1) For the unique triangles (always first element of a group)
@@ -218,3 +225,76 @@ def group_duplicates(identifiers):
     # into the original input array.
     groups = np.split(sorted_indices, index_starts[1:])
     return groups
+
+
+def get_indices_inside(triangulation, unique_triangle_indices):
+    # Triangle data of each unique triangle is collected
+    # and decomposed into vertex coordinates.
+    unique_triangles = np.array([triangulation[i] for i in unique_triangle_indices]).T
+    x1, y1, x2, y2, x3, y3 = shift_to_origin(unique_triangles)
+
+    # Triangle edges are uniquely identified using vectors between
+    # the two vertices of an edge. Edges with the same vector have
+    # the same Bresenham rasterization. Therefore, the vectors of an
+    # edge can be used to store and fetch cached Bresenham results.
+    abx = np.subtract(x2, x1).astype(np.int32)
+    aby = np.subtract(y2, y1).astype(np.int32)
+    bcx = np.subtract(x3, x2).astype(np.int32)
+    bcy = np.subtract(y3, y2).astype(np.int32)
+    bresenham_lookup = gen_bresenham_lookup(abx, aby, bcx, bcy)
+
+    # Each edge is converted to a key into the Bresenham lookup table.
+    ab = (abx.astype(np.uint32) << 16) + aby.astype(np.uint32)
+    bc = (bcx.astype(np.uint32) << 16) + bcy.astype(np.uint32)
+
+    indices_inside = np.array((len(unique_triangles),))
+    for i in range(len(unique_triangles)):
+        pass
+
+
+def shift_to_origin(unique_triangles):
+    # Respective x- and y-minima and -maxima define the
+    # bounding box in which the vertices lie.
+    x1, y1, x2, y2, x3, y3 = unique_triangles
+    xmin = np.minimum(x1, np.minimum(x2, x3))
+    ymin = np.minimum(y1, np.minimum(y2, y3))
+    ymax = np.maximum(y1, np.maximum(y2, y3))
+    height = np.subtract(ymax, ymin)
+
+    # The triangle's vertices are then shifted by xmin and ymin in
+    # order to align the upper-left corner with the origin. That way,
+    # the indices found to lie within the unique triangle can be
+    # interpreted as offsets from the bounding box upper-left corner
+    # of a real triangle.
+    x1 = np.subtract(x1, xmin)
+    x2 = np.subtract(x2, xmin)
+    x3 = np.subtract(x3, xmin)
+
+    y1 = np.subtract(y1, ymin)
+    y2 = np.subtract(y2, ymin)
+    y3 = np.subtract(y3, ymin)
+
+    return x1, y1, x2, y2, x3, y3
+
+
+def gen_bresenham_lookup(abx, aby, bcx, bcy):
+    # The x- and y-components are combined to a vector each, before
+    # searching for unique vectors among them. For each of them, the
+    # Bresenham rasterization is calculated and shifted to the origin,
+    # so that the positions can be treated as offsets.
+    ab = np.vstack((abx, aby)).T
+    bc = np.vstack((bcx, bcy)).T
+    edges = np.concatenate((ab, bc))
+    unique_edges = np.unique(edges, axis=0)
+    unique_bresenhams = [np.array(list(bresenham(0, 0, dx, dy))) for dx, dy in unique_edges]
+
+    # The unique Bresenham rasterizations are stored in a hash map,
+    # with the unique edge vectors converted to integers as keys.
+    bresenham_lookup = dict()
+    ux, uy = unique_edges.T
+    keys = (ux.astype(np.uint32) << 16) + uy.astype(np.uint32)
+
+    for i in range(len(keys)):
+        bresenham_lookup[keys[i]] = unique_bresenhams[i]
+
+    return bresenham_lookup
