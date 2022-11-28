@@ -1,119 +1,103 @@
 import cv2
-import numpy
 import numpy as np
 
-from palette import *
-from bresenham import *
+from numba import njit
 
 
-def find_bounds(a, b, c):
-    # The pixels along the edges of the triangle
-    # specified by a, b and c are part of the triangle.
-    # Everything in between is also inside the triangle.
-    ab = bresenham(a[0], a[1], b[0], b[1])
-    bc = bresenham(b[0], b[1], c[0], c[1])
-    ca = bresenham(c[0], c[1], a[0], a[1])
-    outline = list(ab)
-    outline.extend(bc)
-    outline.extend(ca)
-
-    # Each row is mapped to x_min and x_max, which are
-    # the intersection values of Bresenham lines between
-    # the triangle's vertices in that row. Everything in
-    # between those x-values is inside the triangle.
-    y = [a[1], b[1], c[1]]
-    ymin, ymax = min(y), max(y)
-    bounds = [(float("inf"), float("-inf")) for _ in range(ymin, ymax + 1)]
-
-    for x, y in outline:
-        xmin, xmax = bounds[y - ymin]
-        xmin = min(xmin, x)
-        xmax = max(xmax, x)
-        bounds[y - ymin] = (xmin, xmax)
-
-    return ymin, ymax, bounds
-
-
-def find_color(ymin, ymax, rows, image):
-    colors = [image[y][x] for y in range(ymin, ymax + 1) for x in range(rows[y - ymin][0], rows[y - ymin][1] + 1)]
-    average = np.array(colors).mean(axis=0)
-    return average
-
-
-def colorize2(image, triangulation):
+@njit(cache=True, nogil=True)
+def colorize(image, triangulation):
     canvas = image.copy()
-    for x1, y1, x2, y2, x3, y3 in triangulation:
-        a = (int(x1), int(y1))
-        b = (int(x2), int(y2))
-        c = (int(x3), int(y3))
-        ymin, ymax, rows = find_bounds(a, b, c)
-        color = find_color(ymin, ymax, rows, image)
 
-        for y in range(ymin, ymax + 1):
-            xmin, xmax = rows[y - ymin]
-            for x in range(xmin, xmax + 1):
-                canvas[y][x] = color
+    # Triangle coordinates are converted to discrete
+    # integer values and bounding boxes are calculated.
+    triangulation = triangulation.astype(np.int32)
+    xmin, ymin, xmax, ymax, width, height = find_bounding_boxes(triangulation)
+
+    # Vectorized calculation of only triangle-dependent
+    # components for barycentric coordinate calculations
+    v0x, v0y, v1x, v1y, den = find_barycentric_components(triangulation)
+
+    for i, (t_ax, t_ay, t_bx, t_by, t_cx, t_cy) in enumerate(triangulation):
+        t_xmin, t_xmax = xmin[i], xmax[i]
+        t_ymin, t_ymax = ymin[i], ymax[i]
+        t_width, t_height = width[i], height[i]
+        t_v0x, t_v0y = v0x[i], v0y[i]
+        t_v1x, t_v1y = v1x[i], v1y[i]
+        t_den = den[i]
+
+        # The matrices 'xs' and 'ys' have the same dimensions
+        # as the triangle's bounding box and hold the x- and
+        # y-coordinates of the points inside it, respectively.
+        xs, ys = make_coordinate_matrices(t_xmin, t_xmax, t_ymin, t_ymax, t_width, t_height)
+        ones = np.ones((t_height, t_width))
+
+        # Now, for each point inside the bounding box (or both
+        # coordinate matrices), calculate the decision values.
+        t_v2x = xs - t_ax
+        t_v2y = ys - t_ay
+        v = ((t_v2x * t_v1y) - (t_v2y * t_v1x)) / t_den
+        w = ((t_v2y * t_v0x) - (t_v2x * t_v0y)) / t_den
+        u = (ones - v) - w
+
+        # Each position in the bounding box, where the condition
+        # is met (so that the point lies within the triangle), is
+        # iterated, collecting the color values into separate
+        # accumulators. Then, the color average is calculated.
+        r_total, g_total, b_total, size = 0, 0, 0, 0
+        for ix, x in enumerate(range(t_xmin, t_xmax + 1)):
+            for iy, y in enumerate(range(t_ymin, t_ymax + 1)):
+                if 0 <= u[iy][ix] <= 1:
+                    r, g, b = image[y][x]
+                    r_total += r
+                    g_total += g
+                    b_total += b
+                    size += 1
+
+        r_avg = int(r_total / size)
+        g_avg = int(g_total / size)
+        b_avg = int(b_total / size)
+        color = np.array([r_avg, g_avg, b_avg])
+
+        # The average color is then written
+        # to each point in the triangle.
+        for ix, x in enumerate(range(t_xmin, t_xmax + 1)):
+            for iy, y in enumerate(range(t_ymin, t_ymax + 1)):
+                if 0 <= u[iy][ix] <= 1:
+                    canvas[y][x] = color
 
     return canvas
 
 
-def colorize3(image, triangulation):
-    height, width, _ = image.shape
-    line_info_matrix = get_line_info_matrix(width, height, triangulation)
+@njit(cache=True, nogil=True)
+def find_bounding_boxes(triangulation):
+    x1, y1, x2, y2, x3, y3 = triangulation.T
+    xmin = np.minimum(x1, np.minimum(x2, x3))
+    xmax = np.maximum(x1, np.maximum(x2, x3))
+    ymin = np.minimum(y1, np.minimum(y2, y3))
+    ymax = np.maximum(y1, np.maximum(y2, y3))
+    width = xmax - xmin + 1
+    height = ymax - ymin + 1
+
+    return xmin, ymin, xmax, ymax, width, height
 
 
-def get_line_info_matrix(width, height, triangulation):
-    # Each triangle's vertices are ordered, so that there
-    # are two leftmost vertices 'a' and 'b' and a rightmost
-    # vertex 'c'. The latter defines which edges must be
-    # drawn to the line info matrix, because the triangle
-    # is right to them.
-    line_info_matrix = np.full((height, width), -1, dtype=np.int32)
-    for index, triangle in enumerate(triangulation):
-        # The triangle's vertices are
-        # ordered for easier checks.
-        ax, ay, bx, by, cx, cy = order_vertices(triangle)
+@njit(cache=True, nogil=True)
+def find_barycentric_components(triangulation):
+    ax, ay, bx, by, cx, cy = triangulation.T
+    v0x = bx - ax
+    v0y = by - ay
+    v1x = cx - ax
+    v1y = cy - ay
+    den = v0x * v1y - v1x * v0y
 
-        if cy >= by:
-            # Vertex 'c' below both other vertices
-            points = np.array([[ax, ay], [bx, by], [cx, cy]], dtype=np.int32)
-
-        elif cy <= ay:
-            # Vertex 'c' above both other vertices
-            if ax > bx:
-                points = np.array([[bx, by], [cx, cy]], dtype=np.int32)
-            else:
-                points = np.array([[bx, by], [ax, ay], [cx, cy]], dtype=np.int32)
-
-        else:
-            # Vertex 'c' between both other vertices
-            points = np.array([[ax, ay], [bx, by]], dtype=np.int32)
-
-        cv2.polylines(line_info_matrix, [points], False, index, thickness=1)
+    return v0x, v0y, v1x, v1y, den
 
 
-def order_vertices(coordinates):
-    x1, y1, x2, y2, x3, y3 = coordinates
-    # Order vertices by x coordinate
-    if x1 > x2:
-        x2, y2, x1, y1 = x1, y1, x2, y2
+@njit(cache=True, nogil=True)
+def make_coordinate_matrices(xmin, xmax, ymin, ymax, width, height):
+    ys = np.repeat(np.arange(ymin, ymax + 1), width).reshape((-1, width))
+    xs = np.zeros((height, width))
+    for j in range(height):
+        xs[j] = np.arange(xmin, xmax + 1)
 
-    if x2 > x3:
-        x3, y3, x2, y2 = x2, y2, x3, y3
-
-    if x1 > x2:
-        x2, y2, x1, y1 = x1, y1, x2, y2
-
-    if x2 == x3:
-        # The two rightmost vertices are on the same x-level.
-        # The upper vertex is 'c', the lower is 'b'.
-        if y2 < y3:
-            x3, y3, x2, y2 = x2, y2, x3, y3
-
-    if y1 != y2 and x1 != x2:
-        # The two leftmost vertices are not on the same y-level.
-        # Then, vertex 'a' is the upper one, 'b' the lower one.
-        if y1 > y2:
-            x2, y2, x1, y1 = x1, y1, x2, y2
-
-    return x1, y1, x2, y2, x3, y3
+    return xs, ys
