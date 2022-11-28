@@ -35,9 +35,9 @@ def colorize(image, triangulation):
         # coordinate matrices), calculate the decision values.
         t_v2x = xs - t_ax
         t_v2y = ys - t_ay
-        v = ((t_v2x * t_v1y) - (t_v2y * t_v1x)) / t_den
-        w = ((t_v2y * t_v0x) - (t_v2x * t_v0y)) / t_den
-        u = (ones - v) - w
+        v = (t_v2x * t_v1y - t_v2y * t_v1x) / t_den
+        w = (t_v2y * t_v0x - t_v2x * t_v0y) / t_den
+        u = ones - v - w
 
         # Each position in the bounding box, where the condition
         # is met (so that the point lies within the triangle), is
@@ -96,7 +96,7 @@ def find_barycentric_components(triangulation):
 @njit(cache=True, nogil=True)
 def make_coordinate_matrices(xmin, xmax, ymin, ymax, width, height):
     ys = np.repeat(np.arange(ymin, ymax + 1), width).reshape((-1, width))
-    xs = np.zeros((height, width))
+    xs = np.zeros((height, width), dtype=np.int32)
     for j in range(height):
         xs[j] = np.arange(xmin, xmax + 1)
 
