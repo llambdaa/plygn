@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-
 from numba import njit
 
 
@@ -15,7 +14,7 @@ def colorize(image, triangulation):
 
     # Vectorized calculation of only triangle-dependent
     # components for barycentric coordinate calculations
-    v0x, v0y, v1x, v1y, den = find_barycentric_components(triangulation)
+    v0x, v0y, v1x, v1y, inv_den = find_barycentric_components(triangulation)
 
     for i, (t_ax, t_ay, t_bx, t_by, t_cx, t_cy) in enumerate(triangulation):
         t_xmin, t_xmax = xmin[i], xmax[i]
@@ -23,7 +22,7 @@ def colorize(image, triangulation):
         t_width, t_height = width[i], height[i]
         t_v0x, t_v0y = v0x[i], v0y[i]
         t_v1x, t_v1y = v1x[i], v1y[i]
-        t_den = den[i]
+        t_inv_den = inv_den[i]
 
         # The matrices 'xs' and 'ys' have the same dimensions
         # as the triangle's bounding box and hold the x- and
@@ -35,9 +34,9 @@ def colorize(image, triangulation):
         # coordinate matrices), calculate the decision values.
         t_v2x = xs - t_ax
         t_v2y = ys - t_ay
-        v = (t_v2x * t_v1y - t_v2y * t_v1x) / t_den
-        w = (t_v2y * t_v0x - t_v2x * t_v0y) / t_den
-        u = ones - v - w
+        v = (t_v2x * t_v1y - t_v1x * t_v2y) * t_inv_den
+        w = (t_v0x * t_v2y - t_v2x * t_v0y) * t_inv_den
+        u = v + w
 
         # Each position in the bounding box, where the condition
         # is met (so that the point lies within the triangle), is
@@ -46,7 +45,7 @@ def colorize(image, triangulation):
         r_total, g_total, b_total, size = 0, 0, 0, 0
         for ix, x in enumerate(range(t_xmin, t_xmax + 1)):
             for iy, y in enumerate(range(t_ymin, t_ymax + 1)):
-                if 0 <= u[iy][ix] <= 1:
+                if v[iy][ix] >= 0 and w[iy][ix] >= 0 and u[iy][ix] <= 1:
                     r, g, b = image[y][x]
                     r_total += r
                     g_total += g
@@ -62,7 +61,7 @@ def colorize(image, triangulation):
         # to each point in the triangle.
         for ix, x in enumerate(range(t_xmin, t_xmax + 1)):
             for iy, y in enumerate(range(t_ymin, t_ymax + 1)):
-                if 0 <= u[iy][ix] <= 1:
+                if v[iy][ix] >= 0 and w[iy][ix] >= 0 and u[iy][ix] <= 1:
                     canvas[y][x] = color
 
     return canvas
@@ -70,11 +69,11 @@ def colorize(image, triangulation):
 
 @njit(cache=True, nogil=True)
 def find_bounding_boxes(triangulation):
-    x1, y1, x2, y2, x3, y3 = triangulation.T
-    xmin = np.minimum(x1, np.minimum(x2, x3))
-    xmax = np.maximum(x1, np.maximum(x2, x3))
-    ymin = np.minimum(y1, np.minimum(y2, y3))
-    ymax = np.maximum(y1, np.maximum(y2, y3))
+    ax, ay, bx, by, cx, cy = triangulation.T
+    xmin = np.minimum(ax, np.minimum(bx, cx))
+    xmax = np.maximum(ax, np.maximum(bx, cx))
+    ymin = np.minimum(ay, np.minimum(by, cy))
+    ymax = np.maximum(ay, np.maximum(by, cy))
     width = xmax - xmin + 1
     height = ymax - ymin + 1
 
@@ -89,8 +88,9 @@ def find_barycentric_components(triangulation):
     v1x = cx - ax
     v1y = cy - ay
     den = v0x * v1y - v1x * v0y
+    inv_den = np.reciprocal(den.astype(np.float32))
 
-    return v0x, v0y, v1x, v1y, den
+    return v0x, v0y, v1x, v1y, inv_den
 
 
 @njit(cache=True, nogil=True)
