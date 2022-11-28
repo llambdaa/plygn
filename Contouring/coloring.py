@@ -28,7 +28,6 @@ def colorize(image, triangulation):
         # as the triangle's bounding box and hold the x- and
         # y-coordinates of the points inside it, respectively.
         xs, ys = make_coordinate_matrices(t_xmin, t_xmax, t_ymin, t_ymax, t_width, t_height)
-        ones = np.ones((t_height, t_width))
 
         # Now, for each point inside the bounding box (or both
         # coordinate matrices), calculate the decision values.
