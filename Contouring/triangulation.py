@@ -63,6 +63,11 @@ def find_vertices_equal_space(contour_groups, preferred_distance):
     return vertices
 
 
+def split_triangulation(triangulation, threshold):
+    print("Hello World")
+    pass
+
+
 def find_triangulation(image_shape, vertices):
     height, width, _ = image_shape
     frame = cv2.Subdiv2D((0, 0, width, height))
