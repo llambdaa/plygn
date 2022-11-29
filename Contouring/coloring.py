@@ -51,6 +51,12 @@ def colorize(image, triangulation):
                     b_total += b
                     size += 1
 
+        # Splitting triangles into smaller triangles can lead to
+        # degenerate triangles with zero width along an edge.
+        # It is much simpler to just ignore them here.
+        if size == 0:
+            continue
+
         r_avg = int(r_total / size)
         g_avg = int(g_total / size)
         b_avg = int(b_total / size)

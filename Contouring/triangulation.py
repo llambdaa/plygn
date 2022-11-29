@@ -1,8 +1,10 @@
 import cv2
 import math
+import numpy as np
 
 from contour import *
 from enum import Enum
+from numba import njit
 
 TRIANGULATION_THICKNESS = 1
 TRIANGULATION_COLOR = (0, 255, 0)
@@ -63,9 +65,93 @@ def find_vertices_equal_space(contour_groups, preferred_distance):
     return vertices
 
 
+# @njit(cache=True, nogil=True)
 def split_triangulation(triangulation, threshold):
-    print("Hello World")
-    pass
+    # The size of a triangle determines whether a
+    # triangle must be split into smaller triangles.
+    x1, y1, x2, y2, x3, y3 = triangulation.T
+    sizes = np.abs((x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2)) * 0.5)
+    splits = np.ceil(np.log(sizes / threshold) / np.log(4)).astype(np.int32)
+    splits = np.where(splits < 0, 0, splits)
+
+    # The number of splits for each triangle determine
+    # the total amount of triangles. Knowing it allows
+    # for pre-allocating an array.
+    bases = np.repeat(4, len(splits))
+    count = np.sum(np.power(bases, splits))
+    triangles = np.empty(shape=[count, 6], dtype=np.int32)
+    index = 0
+
+    # Each triangle is split according to its modifier.
+    # Either it will not be split (=0) or a subroutine
+    # is called, so that it is split (possibly) multiple
+    # times before the smaller triangles are written back.
+    for i, split in enumerate(splits):
+        triangle = triangulation[i]
+        if split == 0:
+            # Trivial case - triangle will not be split,
+            # but be written back directly
+            triangles[index] = triangle
+            index += 1
+
+        elif split == 1:
+            # The triangle is split one time, resulting
+            # in four smaller triangles
+            triangles[index:(index + 4)] = split_triangle(triangle)
+            index += 4
+
+        else:
+            # The triangle is split multiple times,
+            # resulting in 4^split smaller triangles
+            current = split_triangle(triangle)
+            for j in range(2, split + 1):
+                # That container will hold the result of
+                # splitting the currently inspected triangles
+                new = np.empty((4 ** j, 6), dtype=np.int32)
+
+                # Each currently inspected triangle is split into
+                # four smaller triangles, which are written to the
+                # collection holding the new triangles
+                for k in range(len(current)):
+                    offset = 4 * k
+                    partial = split_triangle(current[k])
+                    new[offset:(offset + 4)] = partial
+
+                # For the next iteration, the currently inspected
+                # triangles are the smaller triangles we just created
+                current = new
+
+            offset = 4 ** split
+            triangles[index:(index + offset)] = current
+            index += offset
+
+    return triangles
+
+
+def split_triangle(triangle):
+    x1, y1, x2, y2, x3, y3 = triangle
+    # The vectors between the original vertices
+    # are used to build the splitting points
+    dx12, dy12 = x2 - x1, y2 - y1
+    dx23, dy23 = x3 - x2, y3 - y2
+    dx31, dy31 = x1 - x3, y1 - y3
+
+    # The splitting points 'a', 'b' and 'c' lie
+    # directly between the original vertices.
+    ax = x1 + int(dx12 * 0.5)
+    ay = y1 + int(dy12 * 0.5)
+    bx = x2 + int(dx23 * 0.5)
+    by = y2 + int(dy23 * 0.5)
+    cx = x3 + int(dx31 * 0.5)
+    cy = y3 + int(dy31 * 0.5)
+
+    # Using the splitting points,
+    # four new triangles are built.
+    first = [x1, y1, ax, ay, cx, cy]
+    second = [ax, ay, x2, y2, bx, by]
+    third = [cx, cy, bx, by, x3, y3]
+    forth = [ax, ay, bx, by, cx, cy]
+    return np.array([first, second, third, forth])
 
 
 def find_triangulation(image_shape, vertices):
