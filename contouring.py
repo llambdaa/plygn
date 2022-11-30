@@ -11,6 +11,8 @@ from palette import *
 from triangulation import *
 from utils import *
 
+PROCESS_STEP = 1
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
@@ -36,8 +38,86 @@ def parse_arguments():
     return parser.parse_args()
 
 
+def process(description, function, *argv):
+    global PROCESS_STEP
+    now = time()
+
+    print(f"{PROCESS_STEP}. {description}", end='\r')
+    (result) = function(argv)
+    print(f"{PROCESS_STEP}. {description} \t\t{(time() - now).total_seconds()}s")
+    PROCESS_STEP += 1
+    return result
+
+
+def load_image(argv):
+    in_path = argv[0]
+    image_name = os.path.basename(in_path).split('.', 1)[0]
+    image = rawpy.imread(in_path).postprocess()
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    return image, image_name
+
+
+def transform_colorspace(argv):
+    image, colorspace = argv
+    image_as_ints, unique_ints, unique_colors, unique_counts = dedupe_colors(image)
+    translated_unique_colors = to_space(unique_colors, colorspace)
+    return image_as_ints, unique_ints, unique_colors, unique_counts, translated_unique_colors
+
+
+def group_by_color(argv):
+    dominant_count, translated_unique_colors, unique_counts, \
+    image_as_ints, unique_ints, shape = argv
+    labels = kmeans(dominant_count, translated_unique_colors, unique_counts)
+    labels = expand_labels(image_as_ints, unique_ints, labels, shape)
+    return labels
+
+
+def contouring(argv):
+    image, dominant_count, labels, bitmask_kernel = argv
+    contours = find_contours(image, dominant_count, labels, bitmask_kernel)
+    return contours
+
+
+def search_vertices(argv):
+    contours, equal_distance = argv
+    vertices = find_vertices_equal_space(contours, equal_distance)
+    return vertices
+
+
+def write_contours(argv):
+    out_path, image, image_name, colorspace = argv
+    alpha = make_folder(out_path, image_name)
+    gamma = make_folder(alpha, colorspace)
+    show_contours(image, contours, gamma)
+
+
+def triangulate(argv):
+    shape, vertices = argv
+    triangulation = find_triangulation(shape, vertices)
+    return triangulation
+
+
+def triangle_splitting(argv):
+    triangulation, split_threshold = argv
+    split = split_triangulation(triangulation, split_threshold)
+    return split
+
+
+def write_triangulation(argv):
+    out_path, image, image_name, colorspace = argv
+    alpha = make_folder(out_path, image_name)
+    gamma = make_folder(alpha, colorspace)
+    show_triangulation(image, triangulation, gamma)
+
+
+def colorize_triangles(argv):
+    image, triangulation = argv
+    result = colorize(image, triangulation)
+    return result
+
+
 if __name__ == '__main__':
-    # Parsing command line arguments
+    # Parsing Arguments
     args = parse_arguments()
     in_path = os.path.expanduser(args.input)
     out_path = os.path.expanduser(args.output)
@@ -51,80 +131,51 @@ if __name__ == '__main__':
     flag_contours = args.show_contour
     flag_triangulation = args.show_triangulation
 
-    # Load image
-    image_name = os.path.basename(in_path).split('.', 1)[0]
-    image = rawpy.imread(in_path).postprocess()
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-    # Transform image data to color space
+    # Processing
     start = time()
-    now = start
-    print(f"1. Color Space Transformation", end='\r')
-    image_as_ints, unique_ints, unique_colors, unique_counts = dedupe_colors(image)
-    translated_unique_colors = to_space(unique_colors, colorspace)
-    print(f"1. Color Space Transformation \t{(time() - now).total_seconds()}s")
+    image, image_name = process("Image Loading", load_image, in_path)
+
+    image_as_ints, unique_ints, \
+    unique_colors, unique_counts, \
+    translated_unique_colors = process("Color Space Transformation", transform_colorspace,
+                                       image, colorspace)
 
     if flag_plot is True:
-        plot(unique_colors, translated_unique_colors)
+        process("Plotting", plot, unique_colors, translated_unique_colors)
 
-    # Perform k-means clustering
-    # (=> Palette Reduction)
-    now = time()
-    print(f"2. Color Clustering", end='\r')
-    labels = kmeans(dominant_count, translated_unique_colors, unique_counts)
-    labels = expand_labels(image_as_ints, unique_ints, labels, image.shape)
-    print(f"2. Color Clustering \t\t{(time() - now).total_seconds()}s")
+    labels = process("Color Clustering", group_by_color, dominant_count,
+                     translated_unique_colors, unique_counts,
+                     image_as_ints, unique_ints, image.shape)
 
-    # Contouring
-    now = time()
-    print(f"3. Contouring", end='\r')
-    contours = find_contours(image, dominant_count, labels, bitmask_kernel)
-    print(f"3. Contouring \t\t\t{(time() - now).total_seconds()}s")
+    contours = process("Contouring", contouring, image,
+                       dominant_count, labels, bitmask_kernel)
 
-    # Triangulation
-    now = time()
-    print(f"4. Vertex Search", end='\r')
-    match vertex_method:
-        case VertexMethod.EQUAL_SPACE:
-            vertices = find_vertices_equal_space(contours, equal_distance)
-        case _:
-            vertices = list()
-    print(f"4. Vertex Search \t\t{(time() - now).total_seconds()}s")
+    vertices = process("Vertex Search", search_vertices, contours, equal_distance)
 
     if flag_contours is True:
-        alpha = make_folder(out_path, image_name)
-        gamma = make_folder(alpha, colorspace)
-        show_contours(image, contours, gamma)
+        process("Writing Contours", write_contours, out_path, image, image_name, colorspace)
 
-    now = time()
-    print(f"5. Triangulation", end='\r')
-    triangulation = find_triangulation(image.shape, vertices)
+    triangulation = process("Triangulation", triangulate, image.shape, vertices)
+
     if split_threshold > 0:
-        triangulation = split_triangulation(triangulation, split_threshold)
-    print(f"5. Triangulation \t\t{(time() - now).total_seconds()}s")
+        triangulation = process("Triangle Splitting", triangle_splitting, triangulation, split_threshold)
 
     if flag_triangulation is True:
-        alpha = make_folder(out_path, image_name)
-        gamma = make_folder(alpha, colorspace)
-        show_triangulation(image, triangulation, gamma)
+        process("Writing Triangulation", write_triangulation, out_path, image, image_name, colorspace)
 
-    # Coloring
-    now = time()
-    print(f"6. Colorization", end='\r')
-    result = colorize(image, triangulation)
+    colorized_image = process("Triangle Colorization", colorize_triangles, image, triangulation)
     end = time()
-    print(f"6. Colorization \t\t{(end - now).total_seconds()}s")
+
     print(45 * "-")
-    print(f"Total Elapsed: \t\t\t{(end - start).total_seconds()}s")
+    print(f"Total Time: \t\t\t{(end - start).total_seconds()}s")
 
     # Writing Out
     cv2.imwrite(
         f"{out_path}/{image_name}1.jpg",
-        cv2.cvtColor(result, cv2.COLOR_RGB2BGR)
+        cv2.cvtColor(colorized_image, cv2.COLOR_RGB2BGR)
     )
 
     cv2.imwrite(
         f"{out_path}/{image_name}2.jpg",
         cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
     )
-
