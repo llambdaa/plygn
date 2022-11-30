@@ -1,4 +1,3 @@
-import cv2
 import faiss
 import numpy as np
 

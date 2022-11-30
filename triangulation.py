@@ -2,21 +2,13 @@ import cv2
 import math
 import numpy as np
 
-from contour import *
-from enum import Enum
 from numba import njit
 
 TRIANGULATION_THICKNESS = 1
 TRIANGULATION_COLOR = (0, 255, 0)
 
 
-class VertexMethod(Enum):
-    EQUAL_SPACE = 0
-    VARIANCE = 1
-    RANDOM = 2
-
-
-def find_vertices_equal_space(contour_groups, preferred_distance):
+def find_vertices(contour_groups, preferred_distance):
     vertices = list()
     for contour_group in contour_groups:
         for contour in contour_group:
