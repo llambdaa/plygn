@@ -43,7 +43,7 @@ def process(description, function, *argv):
 
     print(f"{PROCESS_STEP}. {description}", end='\r')
     (result) = function(argv)
-    print(f"{PROCESS_STEP}. {description} \t\t{(time() - now).total_seconds()}s")
+    print(f"{PROCESS_STEP}. {description}".ljust(35), f"{(time() - now).total_seconds()}s")
     PROCESS_STEP += 1
     return result
 
@@ -160,7 +160,7 @@ if __name__ == '__main__':
     end = time()
 
     print(45 * "-")
-    print(f"Total Time: \t\t\t{(end - start).total_seconds()}s")
+    print("Total Time: ".ljust(35), f"{(end - start).total_seconds()}s")
 
     # Writing Out
     cv2.imwrite(
