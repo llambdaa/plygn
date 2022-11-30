@@ -128,10 +128,11 @@ if __name__ == '__main__':
     flag_contours = args.show_contour
     flag_triangulation = args.show_triangulation
 
+    # Loading Image
+    image, image_name = load_image(in_path)
+
     # Processing
     start = time()
-    image, image_name = process("Image Loading", load_image, in_path)
-
     image_as_ints, unique_ints, \
     unique_colors, unique_counts, \
     translated_unique_colors = process("Color Space Transformation", transform_colorspace,
