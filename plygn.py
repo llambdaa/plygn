@@ -19,16 +19,17 @@ def parse_arguments():
     parser.add_argument("-i", "--input", required=True, type=str, help="Path to input image")
     parser.add_argument("-o", "--output", required=True, type=str, help="Path to output image")
     parser.add_argument("-c", "--colorspace", required=False, type=ColorSpace, choices=list(ColorSpace),
-                        default=ColorSpace.RGB, help="Clustering color space")
-    parser.add_argument("-e", "--equal-distance", required=False, default=10,
-                        help="Distance parameter for EQUAL_SPACE vertex placement method")
-    parser.add_argument("-s", "--split-threshold", required=False, default=-1,
-                        help="Triangle size threshold, above which it is split into smaller triangles")
-    parser.add_argument("-b", "--bitmask-kernel", required=False, default=5,
-                        help="Bitmask kernel size for morphological transformation")
-    parser.add_argument("-d", "--dominant-count", required=False, default=8, help="Count of dominant colors")
+                        default=ColorSpace.RGB, help="Color space for clustering image data")
+    parser.add_argument("-d", "--distance", required=False, default=10,
+                        help="Preferred vertex distance")
+    parser.add_argument("-s", "--splitting", required=False, default=-1,
+                        help="Maximum triangle area before splitting into smaller triangles")
+    parser.add_argument("-n", "--noise-kernel", required=False, default=5,
+                        help="Kernel size for noise reduction on contours")
+    parser.add_argument("-k", "--kmeans", required=False, default=8,
+                        help="Centroid count for kmeans color clustering")
     parser.add_argument("-p", "--show-plot", required=False, action='store_true',
-                        help="Flag for plotting image in color space")
+                        help="Flag for plotting image in selected color space")
     parser.add_argument("-C", "--show-contour", required=False, action='store_true',
                         help="Flag for exporting images of contours")
     parser.add_argument("-T", "--show-triangulation", required=False, action='store_true',
@@ -47,14 +48,6 @@ def process(description, function, *argv):
     return result
 
 
-def load_image(argv):
-    in_path = argv[0]
-    image_name = os.path.basename(in_path).split('.', 1)[0]
-    image = rawpy.imread(in_path).postprocess()
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    return image, image_name
-
-
 def transform_colorspace(argv):
     image, colorspace = argv
     image_as_ints, unique_ints, unique_colors, unique_counts = dedupe_colors(image)
@@ -63,22 +56,22 @@ def transform_colorspace(argv):
 
 
 def group_by_color(argv):
-    dominant_count, translated_unique_colors, unique_counts, \
+    kmeans_centroids, translated_unique_colors, unique_counts, \
     image_as_ints, unique_ints, shape = argv
-    labels = kmeans(dominant_count, translated_unique_colors, unique_counts)
+    labels = kmeans(kmeans_centroids, translated_unique_colors, unique_counts)
     labels = expand_labels(image_as_ints, unique_ints, labels, shape)
     return labels
 
 
 def contouring(argv):
-    image, dominant_count, labels, bitmask_kernel = argv
-    contours = find_contours(image, dominant_count, labels, bitmask_kernel)
+    image, kmeans_centroids, labels, noise_kernel = argv
+    contours = find_contours(image, kmeans_centroids, labels, noise_kernel)
     return contours
 
 
 def search_vertices(argv):
-    contours, equal_distance = argv
-    vertices = find_vertices(contours, equal_distance)
+    contours, distance = argv
+    vertices = find_vertices(contours, distance)
     return vertices
 
 
@@ -96,8 +89,8 @@ def triangulate(argv):
 
 
 def triangle_splitting(argv):
-    triangulation, split_threshold = argv
-    split = split_triangulation(triangulation, split_threshold)
+    triangulation, splitting = argv
+    split = split_triangulation(triangulation, splitting)
     return split
 
 
@@ -120,16 +113,18 @@ if __name__ == '__main__':
     in_path = os.path.expanduser(args.input)
     out_path = os.path.expanduser(args.output)
     colorspace = args.colorspace
-    equal_distance = int(args.equal_distance)
-    split_threshold = int(args.split_threshold)
-    bitmask_kernel = int(args.bitmask_kernel)
-    dominant_count = int(args.dominant_count)
+    distance = int(args.distance)
+    splitting = int(args.splitting)
+    noise_kernel = int(args.noise_kernel)
+    kmeans_centroids = int(args.kmeans)
     flag_plot = args.show_plot
     flag_contours = args.show_contour
     flag_triangulation = args.show_triangulation
 
     # Loading Image
-    image, image_name = load_image(in_path)
+    image_name = os.path.basename(in_path).split('.', 1)[0]
+    image = rawpy.imread(in_path).postprocess()
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
     # Processing
     start = time()
@@ -141,22 +136,22 @@ if __name__ == '__main__':
     if flag_plot is True:
         process("Plotting", plot, unique_colors, translated_unique_colors)
 
-    labels = process("Color Clustering", group_by_color, dominant_count,
+    labels = process("Color Clustering", group_by_color, kmeans_centroids,
                      translated_unique_colors, unique_counts,
                      image_as_ints, unique_ints, image.shape)
 
     contours = process("Contouring", contouring, image,
-                       dominant_count, labels, bitmask_kernel)
+                       kmeans_centroids, labels, noise_kernel)
 
-    vertices = process("Vertex Search", search_vertices, contours, equal_distance)
+    vertices = process("Vertex Search", search_vertices, contours, distance)
 
     if flag_contours is True:
         process("Writing Contours", write_contours, out_path, image, image_name, colorspace)
 
     triangulation = process("Triangulation", triangulate, image.shape, vertices)
 
-    if split_threshold > 0:
-        triangulation = process("Triangle Splitting", triangle_splitting, triangulation, split_threshold)
+    if splitting > 0:
+        triangulation = process("Triangle Splitting", triangle_splitting, triangulation, splitting)
 
     if flag_triangulation is True:
         process("Writing Triangulation", write_triangulation, out_path, image, image_name, colorspace)
