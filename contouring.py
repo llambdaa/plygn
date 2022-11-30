@@ -2,7 +2,7 @@
 import argparse
 import cv2
 import os
-import datetime as date
+import rawpy
 
 from coloring import *
 from colorspace import *
@@ -53,7 +53,7 @@ if __name__ == '__main__':
 
     # Load image
     image_name = os.path.basename(in_path).split('.', 1)[0]
-    image = cv2.imread(in_path)
+    image = rawpy.imread(in_path).postprocess()
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
     # Transform image data to color space
@@ -117,7 +117,14 @@ if __name__ == '__main__':
     print(45 * "-")
     print(f"Total Elapsed: \t\t\t{(end - start).total_seconds()}s")
 
+    # Writing Out
     cv2.imwrite(
-        f"{out_path}/finished.jpg",
+        f"{out_path}/{image_name}1.jpg",
         cv2.cvtColor(result, cv2.COLOR_RGB2BGR)
     )
+
+    cv2.imwrite(
+        f"{out_path}/{image_name}2.jpg",
+        cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    )
+
