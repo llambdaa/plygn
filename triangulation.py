@@ -57,7 +57,7 @@ def find_vertices(contour_groups, preferred_distance):
     return vertices
 
 
-# @njit(cache=True, nogil=True)
+@njit(cache=True, nogil=True)
 def split_triangulation(triangulation, threshold):
     # The size of a triangle determines whether a
     # triangle must be split into smaller triangles.
@@ -71,7 +71,7 @@ def split_triangulation(triangulation, threshold):
     # for pre-allocating an array.
     bases = np.repeat(4, len(splits))
     count = np.sum(np.power(bases, splits))
-    triangles = np.empty(shape=[count, 6], dtype=np.int32)
+    triangles = np.empty(shape=(count, 6), dtype=np.int32)
     index = 0
 
     # Each triangle is split according to its modifier.
@@ -99,7 +99,7 @@ def split_triangulation(triangulation, threshold):
             for j in range(2, split + 1):
                 # That container will hold the result of
                 # splitting the currently inspected triangles
-                new = np.empty((4 ** j, 6), dtype=np.int32)
+                new = np.empty((4 ** j, 6), dtype=np.int64)
 
                 # Each currently inspected triangle is split into
                 # four smaller triangles, which are written to the
@@ -118,6 +118,7 @@ def split_triangulation(triangulation, threshold):
             index += offset
 
     return triangles
+
 
 @njit(cache=True, nogil=True)
 def split_triangle(triangle):
@@ -143,7 +144,7 @@ def split_triangle(triangle):
     second = [ax, ay, x2, y2, bx, by]
     third = [cx, cy, bx, by, x3, y3]
     forth = [ax, ay, bx, by, cx, cy]
-    return np.array([first, second, third, forth])
+    return np.array([first, second, third, forth], dtype=np.int64)
 
 
 def find_triangulation(image_shape, vertices):
