@@ -28,7 +28,7 @@ def parse_arguments():
                         help="Kernel size for noise reduction on contours")
     parser.add_argument("-k", "--kmeans", required=False, default=8,
                         help="Centroid count for kmeans color clustering")
-    parser.add_argument("-p", "--show-plot", required=False, action='store_true',
+    parser.add_argument("-P", "--show-plot", required=False, action='store_true',
                         help="Flag for plotting image in selected color space")
     parser.add_argument("-C", "--show-contour", required=False, action='store_true',
                         help="Flag for exporting images of contours")
