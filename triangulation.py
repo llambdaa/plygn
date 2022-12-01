@@ -152,8 +152,7 @@ def find_triangulation(image_shape, vertices):
 
     # Perform triangulation and
     # transform into more usable type
-    for vertex in vertices:
-        frame.insert(vertex)
+    frame.insert(vertices)
 
     # Independent of the vertex method the
     # corners of the image are counted as
