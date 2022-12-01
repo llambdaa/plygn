@@ -1,4 +1,4 @@
-# StudienarbeitImpl
+# plygn
 Triangulation-based image abstraction for compression and artistic image generation written in Python.
 
 ## Installation
