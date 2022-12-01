@@ -122,8 +122,12 @@ if __name__ == '__main__':
     flag_triangulation = args.show_triangulation
 
     # Loading Image
-    image_name = os.path.basename(in_path).split('.', 1)[0]
-    image = rawpy.imread(in_path).postprocess()
+    image_name, image_format = os.path.basename(in_path).split('.', 1)
+    if image_format.lower() == "nef" or image_format.lower() == "raw":
+        image = rawpy.imread(in_path).postprocess()
+    else:
+        image = cv2.imread(in_path)
+
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
     # Processing
