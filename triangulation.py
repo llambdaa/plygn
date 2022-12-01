@@ -119,7 +119,7 @@ def split_triangulation(triangulation, threshold):
 
     return triangles
 
-
+@njit(cache=True, nogil=True)
 def split_triangle(triangle):
     x1, y1, x2, y2, x3, y3 = triangle
     # The vectors between the original vertices
