@@ -50,9 +50,7 @@ def find_vertices(contour_groups, preferred_distance):
             # of vertices along a contour line.vertices
             for i in range(1, vertex_count + 1):
                 vertex = contour[(i * distance) - 1][0]
-                x = int(vertex[0])
-                y = int(vertex[1])
-                vertices.append((x, y))
+                vertices.append((int(vertex[0]), int(vertex[1])))
 
     return vertices
 
@@ -153,7 +151,8 @@ def find_triangulation(image_shape, vertices):
 
     # Perform triangulation and
     # transform into more usable type
-    frame.insert(vertices)
+    for vertex in vertices:
+        frame.insert(vertex)
 
     # Independent of the vertex method the
     # corners of the image are counted as
@@ -163,7 +162,7 @@ def find_triangulation(image_shape, vertices):
     frame.insert((width - 1, 0))
     frame.insert((width - 1, height - 1))
 
-    triangulation = np.int32(frame.getTriangleList())
+    triangulation = frame.getTriangleList().astype(np.int32)
     return triangulation
 
 
