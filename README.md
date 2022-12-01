@@ -9,4 +9,4 @@ sudo pip3 install argparse opencv-python rawpy numpy numba faiss plotly
 
 The first time you run the script on an example image, it will be slow.
 That is, because it compiles some parts of it and caches them on your machine.
-After that, it will blazing fast! At least... multiple times faster than before.
+After that, it will run blazingly fast! At least... multiple times faster than before.
