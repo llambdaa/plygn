@@ -5,6 +5,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 from enum import Enum
+from numba import njit
 
 
 class ColorSpace(Enum):
@@ -32,6 +33,7 @@ def dedupe_colors(image):
     return image_as_ints, unique_ints, unique_colors, unique_counts
 
 
+@njit(cache=True, nogil=True)
 def to_hsv_cylinder(pixels):
     # Transpose pixel matrix and
     # split into HSL channels
@@ -54,6 +56,7 @@ def to_hsv_cylinder(pixels):
     return pixels
 
 
+@njit(cache=True, nogil=True)
 def to_hsl_cylinder(pixels):
     # Transpose pixel matrix and
     # split into HSL channels
