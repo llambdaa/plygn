@@ -3,9 +3,10 @@ Triangulation-based image abstraction for compression and artistic image generat
 
 This is a research project for my Bachelor's CS degree. Technically, I have to do it. But the topic was
 my choice and thus it was done with a lot of love! If you have any suggestions or ideas, feel free to
-tell me! However, I will probably not accept contributions from others for now, as the project is still
-running formally and I later have to assure that I have done the work myself (which I have so far!).
-After that, the project is open for collaboration!
+tell me!
+
+| :warning: | Contributions from others are not accepted for now. The project is still running formally and I later have to assure that I have done the work myself! After my studies, the project will be open for collaboration! |
+|-----------|-----------|
 
 ## About
 coming soon
