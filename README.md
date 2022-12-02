@@ -13,6 +13,11 @@
 coming soon
 
 ## Installation (Linux)
+First, clone the repository:
+```
+git clone git@github.com:llambdaa/plygn.git && cd plygn
+```
+
 Before running the script, you must install python3 and multiple dependencies:
 ```
 sudo apt-get install python3.10 python3-pip
