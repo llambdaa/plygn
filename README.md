@@ -1,9 +1,10 @@
 # plygn
-Triangulation-based image abstraction for compression and artistic image generation written in Python.
-
-This is a research project for my Bachelor's CS degree. Technically, I have to do it. But the topic was
-my choice and thus it was done with a lot of love! If you have any suggestions or ideas, feel free to
-tell me!
+<p align="center">
+  Triangulation-based image abstraction for compression and artistic image generation written in Python.
+<p align="center">
+  This is a research project for my Bachelor's CS degree. Technically, I have to do it. But the topic was
+  my choice and thus it was done with a lot of love! If you have any suggestions or ideas, feel free to
+  tell me!
 
 | :warning: | Contributions from others are not accepted for now. The project is still running formally and I later have to assure that I have done the work myself! After my studies, the project will be open for collaboration! |
 |-----------|-----------|
