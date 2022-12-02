@@ -39,7 +39,7 @@ Example:
 ```
 ./plygn.py -i "~/Downloads/example.png" -o "~/Downloads" -c RGB -d 10 -k 32 -n 0 -s 30
 ```
-**plygn** takes `example.png`, plots the image's pixel colors in the `RGB` color space and searches for `k=32` most dominant colors in it. </br>
+**plygn** takes `example.png`, plots the image's pixel colors in the `RGB` color space and searches for `k=32` most dominant colors in it.
 The image is then segmented and contour lines are produced, separating areas of different dominant colors. Since `n=0`, the matrix for removing noise in contour lines is not applied. Along the contour lines, each `d=10`th vertex is considered for triangulation. The resulting triangles are split into even smaller triangles when their area exceed `s=30`.
 
 ## Technical Explanation
