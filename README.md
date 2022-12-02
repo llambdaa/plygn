@@ -12,14 +12,15 @@
 ## About
 coming soon
 
-## Installation
-Before running the script, you must install multiple dependencies:
+## Installation (Linux)
+Before running the script, you must install python3 and multiple dependencies:
 ```
+sudo apt-get install python3.10 python3-pip
 sudo pip3 install argparse opencv-python rawpy numpy numba faiss plotly
 ```
 
 The first time you run the script on an example image, it will be slow.
-That is, because it compiles some parts of it and caches them on your machine.
+That is, because [numba](https://github.com/numba/numba) compiles some parts of it and caches them on your machine.
 After that, it will run blazingly fast! At least... multiple times faster than before.
 
 ## Usage
