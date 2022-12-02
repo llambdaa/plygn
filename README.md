@@ -36,7 +36,7 @@ and amplify or damp their effects. You will understand them best if you have rea
  * `-o || --output`: Specifies image output path
  * `-c || --colorspace`: Specifies color space in which the image's pixel colors are plotted
  * `-k || --kmeans`: Specifies amount of dominant colors searched in color space
- * `-d || --distance`: Specifies the preferred distance between vertices along contour lines
+ * `-d || --distance`: Specifies preferred distance between vertices along contour lines
  * `-n || --noise-kernel`: Specifies matrix size for removing noise in contour lines
  * `-s || --splitting`: Specifies maximum area of triangle before splitting it into smaller triangles
  * `-P || --show-plot`: Toggles plotting image's pixel colors in color space
