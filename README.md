@@ -52,3 +52,5 @@ The image is then segmented and contour lines are produced, separating areas of 
 
 ## Technical Explanation
 coming soon
+
+© llambdaa / Lukas Rapp 2022
