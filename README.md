@@ -1,16 +1,52 @@
 # plygn
+
 <p align="center">
-  Triangulation-based image abstraction for compression and artistic image generation written in Python.
-<p align="center">
-  This is a research project for my Bachelor's CS degree. Technically, I have to do it. But the topic was
-  my choice and thus it was done with a lot of love! If you have any suggestions or ideas, feel free to
-  tell me!
+  Triangulation-based image abstraction for compression and artistic image generation.
+</p>
+  
+---
+  
+This is a research project for my Bachelor's CS degree. Technically... I have to do it. But the topic was
+my choice and thus it was done with a lot of love! If you have any suggestions or ideas, feel free to
+tell me!
 
 | :warning: | Contributions from others are not accepted for now. The project is still running formally and I later have to assure that I have done the work myself! After my studies, the project will be open for collaboration! |
-|-----------|-----------|
+|-----------|:----------|
 
 ## About
-coming soon
+Initially, this project was intended for generation of so-called [Low Poly Art](https://www.google.com/search?q=low+poly+art) from a given image - hence the name **plygn**.
+However, as that functionality was implemented, it came to me that by approximating an image using triangles, data redundancy is
+generated, because all pixels in a triangle have the same color. That redundancy could then be picked up by various image compression
+algorithms (or formats) to compress the image even more.
+
+Of coarse... _**clearing throat**_ I mean, of course, that will work with large triangles. But it won't look anything like the original.
+The compression would come with a massive loss in image quality. However, the triangles can be configured to be smaller and smaller,
+coming closer to the original instead of showing an obvious abstraction of the image.
+
+< Images Will Follow >
+
+And ideed, it works! I managed to push JPG compression even more. Among the images I tested, the ones that were pre-processed before
+being exported as JPG were all between **0% and 60% smaller** than the same image exported as JPG without applying the triangulation technique.
+
+< Exact Inspection Graph Will Follow >
+
+The good part:
+  * very interesting topic for my studies
+  * general approach (pre-processing can be applied before exporting into any image format)
+
+The not-so-good part:
+  * relatively slow (somewhere between 3s and 60s per 4K image - implemented in Python without GPU support)
+  * compression rates greatly vary depending on image and degree of details
+  * works best for large images (~4K)
+
+Actually, it seems like for PNG, very similar compression rates are achieved. That is because this technique does pre-processing. Details, especially
+in large areas of a similar color, are reduced and instead redundancy is created. Any compression algorithm benefits from redundancy. So, it
+does not really matter whether the triangulated image is exported as JPG, PNG or QOI (mostly RLE-based encoding). All of them will now
+find a lot of information that can be discarded or compacted.
+
+However, triangles have a minimum size. And they do remove details from the area they cover. That information could have been needed
+to express depth or edge sharpness. As a result, this technique makes smaller images blurry. But for larger images (4K), this degrading
+in sharpness will most likely not be visible, making it look like the original.
 
 ## Installation (Linux)
 First, clone the repository:
