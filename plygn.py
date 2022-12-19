@@ -147,8 +147,20 @@ def colorize_triangles(argv):
     return result
 
 
+def load_image(path):
+    image_name, image_format = os.path.basename(path).split('.', 1)
+    if image_format.lower() == "nef" or image_format.lower() == "raw":
+        image = rawpy.imread(in_path).postprocess()
+    else:
+        image = cv2.imread(in_path)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    return image_name, image
+
+
 if __name__ == '__main__':
-    # Parsing Arguments
+    # =================================
+    # ||      Parsing Arguments      ||
+    # =================================
     args = parse_arguments()
     in_path = os.path.expanduser(args.input)
     out_path = os.path.expanduser(args.output)
@@ -164,16 +176,15 @@ if __name__ == '__main__':
     flag_triangulation = args.show_triangulation
     flag_original = args.original
 
-    # Loading Image
-    image_name, image_format = os.path.basename(in_path).split('.', 1)
-    if image_format.lower() == "nef" or image_format.lower() == "raw":
-        image = rawpy.imread(in_path).postprocess()
-    else:
-        image = cv2.imread(in_path)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-    # Processing
+    # =============================
+    # ||      Image Loading      ||
+    # =============================
+    image_name, image = load_image(in_path)
     start = time()
+
+    # ======================================
+    # ||      Color Space Operations      ||
+    # ======================================
     image_as_ints, unique_ints, unique_colors, unique_counts, translated_unique_colors =\
         process("Color Space Transformation", transform_colorspace, image, colorspace)
 
@@ -183,13 +194,21 @@ if __name__ == '__main__':
     labels = process("Color Clustering", group_by_color, kmeans_centroids,
                      translated_unique_colors, unique_counts,
                      image_as_ints, unique_ints, image.shape)
+
+    # ==================================
+    # ||      Contour Operations      ||
+    # ==================================
     contours = process("Contouring", contouring, image,
                        kmeans_centroids, labels, noise_kernel)
-    vertices = process("Vertex Search", search_vertices, contours, distance)
 
     if flag_contours is True:
         process("Writing Contours", write_contours, out_path, image, image_name, colorspace)
 
+    vertices = process("Vertex Search", search_vertices, contours, distance)
+
+    # ===================================
+    # ||      Triangle Operations      ||
+    # ===================================
     triangulation = process("Triangulation", triangulate, image.shape, vertices)
 
     if splitting > 0:
@@ -198,10 +217,14 @@ if __name__ == '__main__':
     if flag_triangulation is True:
         process("Writing Triangulation", write_triangulation, out_path, image, image_name, colorspace)
 
+    # ============================
+    # ||      Colorization      ||
+    # ============================
     colorized_image = process("Triangle Colorization", colorize_triangles, image, triangulation)
+
+    # ============================
+    # ||      Finalization      ||
+    # ============================
     end = time()
-
-    print(45 * "-")
-    print("Total Time: ".ljust(35), f"{(end - start).total_seconds()}s")
-
+    print(45 * "-", "\n", "Total Time: ".ljust(35), f"{(end - start).total_seconds()}s")
     export(f"{out_path}/{image_name}", colorized_image, image, export_formats, flag_original)
