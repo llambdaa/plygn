@@ -1,4 +1,5 @@
 import qoi
+import cv2
 from enum import Enum
 
 
