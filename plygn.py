@@ -4,24 +4,15 @@ import cv2
 import os
 import rawpy
 
-from enum import Enum
 from utils import *
 from colorspace import *
 from clustering import *
 from contouring import *
 from triangulation import *
 from colorization import *
+from export import *
 
 PROCESS_STEP = 1
-
-
-class ExportFormat(Enum):
-    JPG = 'JPG'
-    PNG = 'PNG'
-    QOI = 'QOI'
-
-    def __str__(self):
-        return self.value
 
 
 def parse_arguments():
@@ -50,7 +41,7 @@ def parse_arguments():
                         help="Maximum triangle area before splitting into smaller triangles")
     parser.add_argument("-v", "--variance",
                         required=False,
-                        default=-1,
+                        default=-1.0,
                         help="Maximum allowed color variance for a triangle to be drawn")
     parser.add_argument("-n", "--noise-kernel",
                         required=False,
@@ -164,11 +155,14 @@ if __name__ == '__main__':
     colorspace = args.colorspace
     distance = int(args.distance)
     splitting = int(args.splitting)
+    variance = float(args.variance)
     noise_kernel = int(args.noise_kernel)
     kmeans_centroids = int(args.kmeans)
+    export_formats = args.formats
     flag_plot = args.show_plot
     flag_contours = args.show_contour
     flag_triangulation = args.show_triangulation
+    flag_original = args.original
 
     # Loading Image
     image_name, image_format = os.path.basename(in_path).split('.', 1)
@@ -176,15 +170,12 @@ if __name__ == '__main__':
         image = rawpy.imread(in_path).postprocess()
     else:
         image = cv2.imread(in_path)
-
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
     # Processing
     start = time()
-    image_as_ints, unique_ints, \
-        unique_colors, unique_counts, \
-        translated_unique_colors = process("Color Space Transformation", transform_colorspace,
-                                           image, colorspace)
+    image_as_ints, unique_ints, unique_colors, unique_counts, translated_unique_colors =\
+        process("Color Space Transformation", transform_colorspace, image, colorspace)
 
     if flag_plot is True:
         process("Plotting", plot, unique_colors, translated_unique_colors)
@@ -192,10 +183,8 @@ if __name__ == '__main__':
     labels = process("Color Clustering", group_by_color, kmeans_centroids,
                      translated_unique_colors, unique_counts,
                      image_as_ints, unique_ints, image.shape)
-
     contours = process("Contouring", contouring, image,
                        kmeans_centroids, labels, noise_kernel)
-
     vertices = process("Vertex Search", search_vertices, contours, distance)
 
     if flag_contours is True:
@@ -215,25 +204,4 @@ if __name__ == '__main__':
     print(45 * "-")
     print("Total Time: ".ljust(35), f"{(end - start).total_seconds()}s")
 
-    # Writing Out
-    cv2.imwrite(
-        f"{out_path}/{image_name}1.jpg",
-        cv2.cvtColor(colorized_image, cv2.COLOR_RGB2BGR)
-    )
-
-    cv2.imwrite(
-        f"{out_path}/{image_name}2.jpg",
-        cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-    )
-
-    """
-    cv2.imwrite(
-        f"{out_path}/{image_name}1.png",
-        cv2.cvtColor(colorized_image, cv2.COLOR_RGB2BGR)
-    )
-
-    cv2.imwrite(
-        f"{out_path}/{image_name}2.png",
-        cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-    )
-    """
+    export(f"{out_path}/{image_name}", colorized_image, image, export_formats, flag_original)
