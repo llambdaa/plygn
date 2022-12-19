@@ -4,6 +4,7 @@ import cv2
 import os
 import rawpy
 
+from enum import Enum
 from utils import *
 from colorspace import *
 from clustering import *
@@ -14,26 +15,74 @@ from colorization import *
 PROCESS_STEP = 1
 
 
+class ExportFormat(Enum):
+    JPG = 'JPG'
+    PNG = 'PNG'
+    QOI = 'QOI'
+
+    def __str__(self):
+        return self.value
+
+
 def parse_arguments():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("-i", "--input", required=True, type=str, help="Path to input image")
-    parser.add_argument("-o", "--output", required=True, type=str, help="Path to output image")
-    parser.add_argument("-c", "--colorspace", required=False, type=ColorSpace, choices=list(ColorSpace),
-                        default=ColorSpace.RGB, help="Color space for clustering image data")
-    parser.add_argument("-d", "--distance", required=False, default=10,
+    parser.add_argument("-i", "--input",
+                        required=True,
+                        type=str,
+                        help="Path to input image")
+    parser.add_argument("-o", "--output",
+                        required=True,
+                        type=str,
+                        help="Path to output image")
+    parser.add_argument("-c", "--colorspace",
+                        required=False,
+                        type=ColorSpace,
+                        choices=list(ColorSpace),
+                        default=ColorSpace.RGB,
+                        help="Color space for clustering image data")
+    parser.add_argument("-d", "--distance",
+                        required=False,
+                        default=10,
                         help="Preferred vertex distance")
-    parser.add_argument("-s", "--splitting", required=False, default=-1,
+    parser.add_argument("-s", "--splitting",
+                        required=False,
+                        default=-1,
                         help="Maximum triangle area before splitting into smaller triangles")
-    parser.add_argument("-n", "--noise-kernel", required=False, default=5,
+    parser.add_argument("-v", "--variance",
+                        required=False,
+                        default=-1,
+                        help="Maximum allowed color variance for a triangle to be drawn")
+    parser.add_argument("-n", "--noise-kernel",
+                        required=False,
+                        default=5,
                         help="Kernel size for noise reduction on contours")
-    parser.add_argument("-k", "--kmeans", required=False, default=8,
+    parser.add_argument("-k", "--kmeans",
+                        required=False,
+                        default=8,
                         help="Centroid count for kmeans color clustering")
-    parser.add_argument("-P", "--show-plot", required=False, action='store_true',
+    parser.add_argument("-f", "--formats",
+                        required=False,
+                        type=ExportFormat,
+                        choices=list(ExportFormat),
+                        default=[ExportFormat.JPG],
+                        action="append",
+                        help="Export formats")
+    parser.add_argument("-P", "--show-plot",
+                        required=False,
+                        action='store_true',
                         help="Flag for plotting image in selected color space")
-    parser.add_argument("-C", "--show-contour", required=False, action='store_true',
+    parser.add_argument("-C", "--show-contour",
+                        required=False,
+                        action='store_true',
                         help="Flag for exporting images of contours")
-    parser.add_argument("-T", "--show-triangulation", required=False, action='store_true',
+    parser.add_argument("-T", "--show-triangulation",
+                        required=False,
+                        action='store_true',
                         help="Flag for exporting triangulation of image")
+    parser.add_argument("-O", "--original",
+                        required=False,
+                        action='store_true',
+                        help="Flag for also exporting original image in specified export formats")
     return parser.parse_args()
 
 
@@ -57,7 +106,7 @@ def transform_colorspace(argv):
 
 def group_by_color(argv):
     kmeans_centroids, translated_unique_colors, unique_counts, \
-    image_as_ints, unique_ints, shape = argv
+        image_as_ints, unique_ints, shape = argv
     labels = kmeans(kmeans_centroids, translated_unique_colors, unique_counts)
     labels = expand_labels(image_as_ints, unique_ints, labels, shape)
     return labels
@@ -133,9 +182,9 @@ if __name__ == '__main__':
     # Processing
     start = time()
     image_as_ints, unique_ints, \
-    unique_colors, unique_counts, \
-    translated_unique_colors = process("Color Space Transformation", transform_colorspace,
-                                       image, colorspace)
+        unique_colors, unique_counts, \
+        translated_unique_colors = process("Color Space Transformation", transform_colorspace,
+                                           image, colorspace)
 
     if flag_plot is True:
         process("Plotting", plot, unique_colors, translated_unique_colors)
@@ -176,3 +225,15 @@ if __name__ == '__main__':
         f"{out_path}/{image_name}2.jpg",
         cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
     )
+
+    """
+    cv2.imwrite(
+        f"{out_path}/{image_name}1.png",
+        cv2.cvtColor(colorized_image, cv2.COLOR_RGB2BGR)
+    )
+
+    cv2.imwrite(
+        f"{out_path}/{image_name}2.png",
+        cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    )
+    """
