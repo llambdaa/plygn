@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import math
 
 from numba import njit
 
@@ -71,7 +72,7 @@ def colorize(image, triangulation, variance):
                     if v[iy][ix] >= 0 and w[iy][ix] >= 0 and u[iy][ix] <= 1:
                         r1, g1, b1 = image[y][x]
                         r2, g2, b2 = color
-                        dif = math.sqrt((r1 - r2)**2 + (g1 - g2)**2, (b1 - b2)**2)
+                        dif = math.sqrt((r1 - r2)**2 + (g1 - g2)**2 + (b1 - b2)**2)
                         if dif > variance:
                             variance_violated = True
 

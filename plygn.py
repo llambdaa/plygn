@@ -142,8 +142,8 @@ def write_triangulation(argv):
 
 
 def colorize_triangles(argv):
-    image, triangulation = argv
-    result = colorize(image, triangulation)
+    image, triangulation, variance = argv
+    result = colorize(image, triangulation, variance)
     return result
 
 
