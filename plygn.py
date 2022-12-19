@@ -220,7 +220,7 @@ if __name__ == '__main__':
     # ============================
     # ||      Colorization      ||
     # ============================
-    colorized_image = process("Triangle Colorization", colorize_triangles, image, triangulation)
+    colorized_image = process("Triangle Colorization", colorize_triangles, image, triangulation, variance)
 
     # ============================
     # ||      Finalization      ||

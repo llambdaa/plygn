@@ -5,7 +5,7 @@ from numba import njit
 
 
 @njit(cache=True, nogil=True)
-def colorize(image, triangulation):
+def colorize(image, triangulation, variance):
     canvas = image.copy()
 
     # Triangle coordinates are converted to discrete
@@ -62,6 +62,21 @@ def colorize(image, triangulation):
         g_avg = int(g_total / size)
         b_avg = int(b_total / size)
         color = np.array([r_avg, g_avg, b_avg])
+
+        # EXPERIMENTAL
+        if variance > 0:
+            variance_violated = False
+            for ix, x in enumerate(range(t_xmin, t_xmax + 1)):
+                for iy, y in enumerate(range(t_ymin, t_ymax + 1)):
+                    if v[iy][ix] >= 0 and w[iy][ix] >= 0 and u[iy][ix] <= 1:
+                        r1, g1, b1 = image[y][x]
+                        r2, g2, b2 = color
+                        dif = math.sqrt((r1 - r2)**2 + (g1 - g2)**2, (b1 - b2)**2)
+                        if dif > variance:
+                            variance_violated = True
+
+            if variance_violated:
+                continue
 
         # The average color is then written
         # to each point in the triangle.
