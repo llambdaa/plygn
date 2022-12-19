@@ -56,7 +56,7 @@ def parse_arguments():
                         type=ExportFormat,
                         choices=list(ExportFormat),
                         default=[ExportFormat.JPG],
-                        action="append",
+                        nargs='+',
                         help="Export formats")
     parser.add_argument("-P", "--show-plot",
                         required=False,
@@ -170,7 +170,7 @@ if __name__ == '__main__':
     variance = float(args.variance)
     noise_kernel = int(args.noise_kernel)
     kmeans_centroids = int(args.kmeans)
-    export_formats = args.formats
+    export_formats = set(args.formats)
     flag_plot = args.show_plot
     flag_contours = args.show_contour
     flag_triangulation = args.show_triangulation
