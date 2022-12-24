@@ -49,7 +49,7 @@ def colorize(image, triangulation, variance):
 
         # Each position in the bounding box, where the condition
         # is met (so that the point lies within the triangle), is
-        # iterated, collecting the color values into separate
+        # iterated over, collecting the color values into separate
         # accumulators. Then, the color average is calculated.
         r_total, g_total, b_total, size = 0, 0, 0, 0
         for ix, x in enumerate(range(t_xmin, t_xmax + 1)):
@@ -72,23 +72,26 @@ def colorize(image, triangulation, variance):
         b_avg = int(b_total / size)
         color = np.array([r_avg, g_avg, b_avg])
 
-        # EXPERIMENTAL
+        # When the variance parameter is set, the distances between the
+        # average color and each color in the triangle is calculated.
+        # If any distance exceeds the specified value, the triangle is
+        # not colored in using the average color.
+        # TODO: Vectorize!
+        colorable = True
         if variance > 0:
-            variance_violated = False
             for ix, x in enumerate(range(t_xmin, t_xmax + 1)):
                 for iy, y in enumerate(range(t_ymin, t_ymax + 1)):
                     if inside[iy][ix]:
                         r1, g1, b1 = image[y][x]
                         r2, g2, b2 = color
-                        dif = math.sqrt((r1 - r2)**2 + (g1 - g2)**2 + (b1 - b2)**2)
-                        if dif > variance:
-                            variance_violated = True
+                        distance = math.sqrt((r1 - r2)**2 + (g1 - g2)**2 + (b1 - b2)**2)
+                        if distance > variance:
+                            colorable = False
 
-            if variance_violated:
-                continue
+        if not colorable:
+            continue
 
-        # The average color is then written
-        # to each point in the triangle.
+        # The average color is then written to each point in the triangle.
         for ix, x in enumerate(range(t_xmin, t_xmax + 1)):
             for iy, y in enumerate(range(t_ymin, t_ymax + 1)):
                 if inside[iy][ix] == 1:
