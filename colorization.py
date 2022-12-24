@@ -39,6 +39,14 @@ def colorize(image, triangulation, variance):
         w = (t_v0x * t_v2y - t_v2x * t_v0y) * t_inv_den
         u = v + w
 
+        # For each position in the bounding box, that lies within
+        # the triangle, a condensed decision variable is set.
+        inside = np.zeros((t_height, t_width))
+        for ix, x in enumerate(range(t_xmin, t_xmax + 1)):
+            for iy, y in enumerate(range(t_ymin, t_ymax + 1)):
+                if v[iy][ix] >= 0 and w[iy][ix] >= 0 and u[iy][ix] <= 1:
+                    inside[iy][ix] = 1
+
         # Each position in the bounding box, where the condition
         # is met (so that the point lies within the triangle), is
         # iterated, collecting the color values into separate
@@ -46,7 +54,7 @@ def colorize(image, triangulation, variance):
         r_total, g_total, b_total, size = 0, 0, 0, 0
         for ix, x in enumerate(range(t_xmin, t_xmax + 1)):
             for iy, y in enumerate(range(t_ymin, t_ymax + 1)):
-                if v[iy][ix] >= 0 and w[iy][ix] >= 0 and u[iy][ix] <= 1:
+                if inside[iy][ix] == 1:
                     r, g, b = image[y][x]
                     r_total += r
                     g_total += g
@@ -69,7 +77,7 @@ def colorize(image, triangulation, variance):
             variance_violated = False
             for ix, x in enumerate(range(t_xmin, t_xmax + 1)):
                 for iy, y in enumerate(range(t_ymin, t_ymax + 1)):
-                    if v[iy][ix] >= 0 and w[iy][ix] >= 0 and u[iy][ix] <= 1:
+                    if inside[iy][ix]:
                         r1, g1, b1 = image[y][x]
                         r2, g2, b2 = color
                         dif = math.sqrt((r1 - r2)**2 + (g1 - g2)**2 + (b1 - b2)**2)
@@ -83,7 +91,7 @@ def colorize(image, triangulation, variance):
         # to each point in the triangle.
         for ix, x in enumerate(range(t_xmin, t_xmax + 1)):
             for iy, y in enumerate(range(t_ymin, t_ymax + 1)):
-                if v[iy][ix] >= 0 and w[iy][ix] >= 0 and u[iy][ix] <= 1:
+                if inside[iy][ix] == 1:
                     canvas[y][x] = color
 
     return canvas
