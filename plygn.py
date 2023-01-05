@@ -95,6 +95,11 @@ def transform_colorspace(argv):
     return image_as_ints, unique_ints, unique_colors, unique_counts, translated_unique_colors
 
 
+def plot_colorspace(argv):
+    unique_colors, translated_unique_colors = argv
+    plot(unique_colors, translated_unique_colors)
+
+
 def group_by_color(argv):
     kmeans_centroids, translated_unique_colors, unique_counts, \
         image_as_ints, unique_ints, shape = argv
@@ -189,7 +194,7 @@ if __name__ == '__main__':
         process("Color Space Transformation", transform_colorspace, image, colorspace)
 
     if flag_plot is True:
-        process("Plotting", plot, unique_colors, translated_unique_colors)
+        process("Plotting", plot_colorspace, unique_colors, translated_unique_colors)
 
     labels = process("Color Clustering", group_by_color, kmeans_centroids,
                      translated_unique_colors, unique_counts,
