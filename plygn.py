@@ -231,5 +231,5 @@ if __name__ == '__main__':
     # ||      Finalization      ||
     # ============================
     end = time()
-    print(45 * "-", "\n", "Total Time: ".ljust(35), f"{(end - start).total_seconds()}s")
+    print(45 * "-" + "\n" + "Total Time: ".ljust(35), f"{(end - start).total_seconds()}s")
     export(f"{out_path}/{image_name}", colorized_image, image, export_formats, flag_original)
