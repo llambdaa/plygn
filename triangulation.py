@@ -166,7 +166,7 @@ def find_triangulation(image_shape, vertices):
     return triangulation
 
 
-def show_triangulation(image, triangles, out_path):
+def export_triangulation(image, triangles, out_path):
     result = image.copy()
     for x1, y1, x2, y2, x3, y3 in triangles:
         a = (x1, y1)

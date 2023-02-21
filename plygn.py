@@ -58,22 +58,22 @@ def parse_arguments():
                         default=[ExportFormat.JPG],
                         nargs='+',
                         help="Export formats")
-    parser.add_argument("-P", "--show-plot",
+    parser.add_argument("-P", "--plot",
                         required=False,
                         action='store_true',
                         help="Flag for plotting image in selected color space")
-    parser.add_argument("-C", "--show-contour",
+    parser.add_argument("-C", "--export-contours",
                         required=False,
                         action='store_true',
                         help="Flag for exporting images of contours")
-    parser.add_argument("-T", "--show-triangulation",
+    parser.add_argument("-T", "--export-triangulation",
                         required=False,
                         action='store_true',
                         help="Flag for exporting triangulation of image")
-    parser.add_argument("-O", "--original",
+    parser.add_argument("-O", "--export-original",
                         required=False,
                         action='store_true',
-                        help="Flag for also exporting original image in specified export formats")
+                        help="Flag for exporting original image in specified export formats")
     return parser.parse_args()
 
 
@@ -124,7 +124,7 @@ def write_contours(argv):
     out_path, image, image_name, colorspace = argv
     alpha = make_folder(out_path, image_name)
     gamma = make_folder(alpha, colorspace)
-    show_contours(image, contours, gamma)
+    export_contours(image, contours, gamma)
 
 
 def triangulate(argv):
@@ -143,7 +143,7 @@ def write_triangulation(argv):
     out_path, image, image_name, colorspace = argv
     alpha = make_folder(out_path, image_name)
     gamma = make_folder(alpha, colorspace)
-    show_triangulation(image, triangulation, gamma)
+    export_triangulation(image, triangulation, gamma)
 
 
 def colorize_triangles(argv):
@@ -176,10 +176,10 @@ if __name__ == '__main__':
     noise_kernel = int(args.noise_kernel)
     kmeans_centroids = int(args.kmeans)
     export_formats = set(args.formats)
-    flag_plot = args.show_plot
-    flag_contours = args.show_contour
-    flag_triangulation = args.show_triangulation
-    flag_original = args.original
+    flag_plot = args.plot
+    flag_contours = args.export_contours
+    flag_triangulation = args.export_triangulation
+    flag_original = args.export_original
 
     # =============================
     # ||      Image Loading      ||

@@ -1,5 +1,4 @@
 import cv2
-import numpy as np
 
 CONTOUR_THICKNESS = 1
 CONTOUR_COLOR = (255, 0, 255)
@@ -34,7 +33,7 @@ def find_contours(image, cluster_count, labels, kernel_size):
     return contour_groups
 
 
-def show_contours(image, contour_groups, out_path):
+def export_contours(image, contour_groups, out_path):
     combined_image = image.copy()
     for i, contour_group in enumerate(contour_groups):
         # For each cluster, a separate
