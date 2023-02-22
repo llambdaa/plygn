@@ -40,7 +40,7 @@ def get_format_object(output, format, input_size, flag_unprocessed):
     processed_image = {
         "name": processed_name,
         "size": processed_size,
-        "ratio": processed_size / input_size,
+        "ratio_to_original": processed_size / input_size,
         "similarity": "n/a"
     }
     format_object["processed"] = processed_image
@@ -52,9 +52,13 @@ def get_format_object(output, format, input_size, flag_unprocessed):
         unprocessed_image = {
             "name": unprocessed_name,
             "size": unprocessed_size,
-            "ratio": unprocessed_size / input_size,
+            "ratio_to_original": unprocessed_size / input_size,
             "similarity": "n/a"
         }
         format_object["unprocessed"] = unprocessed_image
+
+        # At this point, compression happens with and without
+        # previous triangulation. Its impact hence can be determined.
+        format_object["triangulation_impact"] = processed_size / unprocessed_size
 
     return format_object
