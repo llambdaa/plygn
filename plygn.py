@@ -259,6 +259,9 @@ if __name__ == '__main__':
 
             process_image(file)
             processed_images += 1
+
+            # Reset logging step counter
+            logging_step = 1
         
         print(f"In total {processed_images} images have been processed.")
 
