@@ -2,7 +2,9 @@
 import argparse
 import cv2
 import os
+import sys
 import rawpy
+import json
 
 from utils import *
 from colorspace import *
@@ -11,8 +13,6 @@ from contouring import *
 from triangulation import *
 from colorization import *
 from export import *
-
-PROCESS_STEP = 1
 
 
 def parse_arguments():
@@ -58,6 +58,10 @@ def parse_arguments():
                         default=[ExportFormat.JPG],
                         nargs='+',
                         help="Export formats")
+    parser.add_argument("-B", "--benchmark",
+                        required=False,
+                        action='store_true',
+                        help="Flag for printing and logging compression benchmarks")
     parser.add_argument("-P", "--plot",
                         required=False,
                         action='store_true',
@@ -77,84 +81,9 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def process(description, function, *argv):
-    global PROCESS_STEP
-    now = time()
-
-    print(f"{PROCESS_STEP}. {description}", end='\r')
-    (result) = function(argv)
-    print(f"{PROCESS_STEP}. {description}".ljust(35), f"{(time() - now).total_seconds()}s")
-    PROCESS_STEP += 1
-    return result
-
-
-def transform_colorspace(argv):
-    image, colorspace = argv
-    image_as_ints, unique_ints, unique_colors, unique_counts = dedupe_colors(image)
-    translated_unique_colors = to_space(unique_colors, colorspace)
-    return image_as_ints, unique_ints, unique_colors, unique_counts, translated_unique_colors
-
-
-def plot_colorspace(argv):
-    unique_colors, translated_unique_colors = argv
-    plot(unique_colors, translated_unique_colors)
-
-
-def group_by_color(argv):
-    kmeans_centroids, translated_unique_colors, unique_counts, \
-        image_as_ints, unique_ints, shape = argv
-    labels = kmeans(kmeans_centroids, translated_unique_colors, unique_counts)
-    labels = expand_labels(image_as_ints, unique_ints, labels, shape)
-    return labels
-
-
-def contouring(argv):
-    image, kmeans_centroids, labels, noise_kernel = argv
-    contours = find_contours(image, kmeans_centroids, labels, noise_kernel)
-    return contours
-
-
-def search_vertices(argv):
-    contours, distance = argv
-    vertices = find_vertices(contours, distance)
-    return vertices
-
-
-def write_contours(argv):
-    out_path, image, image_name, colorspace = argv
-    alpha = make_folder(out_path, image_name)
-    gamma = make_folder(alpha, colorspace)
-    export_contours(image, contours, gamma)
-
-
-def triangulate(argv):
-    shape, vertices = argv
-    triangulation = find_triangulation(shape, vertices)
-    return triangulation
-
-
-def triangle_splitting(argv):
-    triangulation, splitting = argv
-    split = split_triangulation(triangulation, splitting)
-    return split
-
-
-def write_triangulation(argv):
-    out_path, image, image_name, colorspace = argv
-    alpha = make_folder(out_path, image_name)
-    gamma = make_folder(alpha, colorspace)
-    export_triangulation(image, triangulation, gamma)
-
-
-def colorize_triangles(argv):
-    image, triangulation = argv
-    result = colorize(image, triangulation)
-    return result
-
-
 def load_image(path):
     image_name, image_format = os.path.basename(path).split('.', 1)
-    if image_format.lower() == "nef" or image_format.lower() == "raw":
+    if image_format.upper() in ["NEF", "RAW"]:
         image = rawpy.imread(in_path).postprocess()
     else:
         image = cv2.imread(in_path)
@@ -162,10 +91,115 @@ def load_image(path):
     return image_name, image
 
 
+def logging_pre(description):
+    global logging_desc
+    global logging_time
+    logging_desc = description
+    logging_time = time()
+    print(f"{logging_step}. {description}", end='\r')
+
+
+def logging_post():
+    global logging_step
+    delta = (time() - logging_time).total_seconds()
+    print(f"{logging_step}. {logging_desc}".ljust(35), f"{delta}s")
+    logging_step += 1
+
+
+def process_image(in_path):
+    # =============================
+    # ||      Image Loading      ||
+    # =============================
+    image_name, image_data = load_image(in_path)
+    start = time()
+
+    # ======================================
+    # ||      Color Space Operations      ||
+    # ======================================
+    logging_pre("Color Space Transformation")
+    image_as_ints, unique_ints, unique_colors, unique_counts = dedupe_colors(image_data)
+    translated_unique_colors = to_space(unique_colors, colorspace)
+    logging_post()
+
+    if flag_plot is True:
+        logging_pre("Plotting")
+        plot(unique_colors, translated_unique_colors)
+        logging_post()
+
+    logging_pre("Color Clustering")
+    labels = kmeans(kmeans_centroids, translated_unique_colors, unique_counts)
+    labels = expand_labels(image_as_ints, unique_ints, labels, image_data.shape)
+    logging_post()
+
+    # ==================================
+    # ||      Contour Operations      ||
+    # ==================================
+    logging_pre("Contouring")
+    contours = find_contours(image_data, kmeans_centroids, labels, noise_kernel)
+    logging_post()
+
+    if flag_contours is True:
+        logging_pre("Exporting Contours")
+        partial_folder = make_folder(out_path, image_name)
+        export_folder = make_folder(partial_folder, colorspace)
+        export_contours(image_data, contours, export_folder)
+        logging_post()
+
+    logging_pre("Vertex Search")
+    vertices = find_vertices(contours, distance)
+    logging_post()
+
+    # ===================================
+    # ||      Triangle Operations      ||
+    # ===================================
+    logging_pre("Triangulation")
+    triangulation = find_triangulation(image_data.shape, vertices)
+    logging_post()
+
+    if splitting > 0:
+        logging_pre("Triangle Splitting")
+        triangulation = split_triangulation(triangulation, splitting)
+        logging_post()
+
+    if flag_triangulation is True:
+        logging_pre("Exporting Triangulation")
+        partial_folder = make_folder(out_path, image_name)
+        export_folder = make_folder(partial_folder, colorspace)
+        export_triangulation(image_data, triangulation, export_folder)
+        logging_post()
+
+    # ============================
+    # ||      Colorization      ||
+    # ============================
+    logging_pre("Triangle Colorization")
+    colorized_image = colorize(image_data, triangulation)
+    logging_post()
+
+    # ============================
+    # ||      Finalization      ||
+    # ============================
+    delta = (time() - start).total_seconds()
+    print(45 * "-")
+    print("Total Time: ".ljust(35), f"{delta}s")
+    export(f"{out_path}/{image_name}", colorized_image, image_data, export_formats, flag_original)
+
+    # ==========================
+    # ||      Benchmarking    ||
+    # ==========================
+    if flag_benchmark:
+        pass
+
+
+def is_supported_image_format(path):
+    _, format = os.path.basename(path).split('.', 1)
+    return format, format.upper() in ["NEF", "RAW", "JPG", "JPEG", "PNG", "BMP"]
+
+
 if __name__ == '__main__':
     # =================================
     # ||      Parsing Arguments      ||
     # =================================
+    # Program arguments
     args = parse_arguments()
     in_path = os.path.expanduser(args.input)
     out_path = os.path.expanduser(args.output)
@@ -176,60 +210,54 @@ if __name__ == '__main__':
     noise_kernel = int(args.noise_kernel)
     kmeans_centroids = int(args.kmeans)
     export_formats = set(args.formats)
+    flag_benchmark = args.benchmark
     flag_plot = args.plot
     flag_contours = args.export_contours
     flag_triangulation = args.export_triangulation
     flag_original = args.export_original
 
-    # =============================
-    # ||      Image Loading      ||
-    # =============================
-    image_name, image = load_image(in_path)
-    start = time()
+    # Logging
+    logging_step = 1
+    logging_time = None
+    logging_desc = None
+    benchmark_results = list()
 
-    # ======================================
-    # ||      Color Space Operations      ||
-    # ======================================
-    image_as_ints, unique_ints, unique_colors, unique_counts, translated_unique_colors =\
-        process("Color Space Transformation", transform_colorspace, image, colorspace)
+    # ========================
+    # ||      Processing    ||
+    # ========================
+    if not os.path.exists(in_path):
+        sys.exit(f"File '{in_path}' not found!")
 
-    if flag_plot is True:
-        process("Plotting", plot_colorspace, unique_colors, translated_unique_colors)
+    if os.path.isfile(in_path):
+        # The given path points to a file. The image gets processed
+        # if its type is supported, otherwise an error is reported.
+        format, supported = is_supported_image_format(in_path)
+        if not supported:
+            sys.exit(f"Format '{format}' not supported!")
+        process_image(in_path)
 
-    labels = process("Color Clustering", group_by_color, kmeans_centroids,
-                     translated_unique_colors, unique_counts,
-                     image_as_ints, unique_ints, image.shape)
+    elif os.path.isdir(in_path):
+        # The given path points to a directory. It is attempted that
+        # each image gets processed. If its type is not supported,
+        # the file gets skipped.
+        processed_images = 0
+        for entry in os.listdir(in_path):
+            file = os.path.join(in_path,entry)
+            _, supported = is_supported_image_format(in_path)
+            if not supported:
+                continue
 
-    # ==================================
-    # ||      Contour Operations      ||
-    # ==================================
-    contours = process("Contouring", contouring, image,
-                       kmeans_centroids, labels, noise_kernel)
+            process_image(file)
+            processed_images += 1
+        
+        print(f"In total {processed_images} images have been processed.")
 
-    if flag_contours is True:
-        process("Writing Contours", write_contours, out_path, image, image_name, colorspace)
-
-    vertices = process("Vertex Search", search_vertices, contours, distance)
-
-    # ===================================
-    # ||      Triangle Operations      ||
-    # ===================================
-    triangulation = process("Triangulation", triangulate, image.shape, vertices)
-
-    if splitting > 0:
-        triangulation = process("Triangle Splitting", triangle_splitting, triangulation, splitting)
-
-    if flag_triangulation is True:
-        process("Writing Triangulation", write_triangulation, out_path, image, image_name, colorspace)
-
-    # ============================
-    # ||      Colorization      ||
-    # ============================
-    colorized_image = process("Triangle Colorization", colorize_triangles, image, triangulation)
-
-    # ============================
-    # ||      Finalization      ||
-    # ============================
-    end = time()
-    print(45 * "-" + "\n" + "Total Time: ".ljust(35), f"{(end - start).total_seconds()}s")
-    export(f"{out_path}/{image_name}", colorized_image, image, export_formats, flag_original)
+    # ==========================
+    # ||      Benchmarking    ||
+    # ==========================
+    if flag_benchmark:
+        benchmark_path = f"{out_path}/benchmark.json"
+        with open(benchmark_path, "w+") as benchmark_file:
+            json.dump(benchmark_results, benchmark_file, ensure_ascii=False, indent=4)
+            print(f"Benchmark results have been written out to '{benchmark_path}'.")
+            
