@@ -263,7 +263,7 @@ if __name__ == '__main__':
             # Reset logging step counter
             logging_step = 1
         
-        print(f"In total {processed_images} images have been processed.")
+        print(f">> In total {processed_images} images have been processed.")
 
     # ==========================
     # ||      Benchmarking    ||
