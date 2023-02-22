@@ -74,10 +74,10 @@ def parse_arguments():
                         required=False,
                         action='store_true',
                         help="Flag for exporting triangulation of image")
-    parser.add_argument("-O", "--export-original",
+    parser.add_argument("-U", "--export-unprocessed",
                         required=False,
                         action='store_true',
-                        help="Flag for exporting original image in specified export formats")
+                        help="Flag for exporting unprocessed image in specified formats for comparison")
     return parser.parse_args()
 
 
@@ -182,7 +182,7 @@ def process_image(in_path):
     delta = (time() - start).total_seconds()
     print(45 * "-")
     print("Total Time: ".ljust(35), f"{delta}s")
-    export(f"{out_path}/{image_name}", colorized_image, image_data, export_formats, flag_original)
+    export(f"{out_path}/{image_name}", colorized_image, image_data, export_formats, flag_unprocessed)
 
     # ==========================
     # ||      Benchmarking    ||
@@ -219,7 +219,7 @@ if __name__ == '__main__':
     flag_plot = args.plot
     flag_contours = args.export_contours
     flag_triangulation = args.export_triangulation
-    flag_original = args.export_original
+    flag_unprocessed = args.export_unprocessed
 
     # Logging
     logging_step = 1
