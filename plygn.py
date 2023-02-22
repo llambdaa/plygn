@@ -111,6 +111,7 @@ def process_image(in_path):
     # ||      Image Loading      ||
     # =============================
     image_name, image_data = load_image(in_path)
+    print(f"Processing '{truncate_path(in_path, 3)}'")
     start = time()
 
     # ======================================
