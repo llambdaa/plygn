@@ -252,6 +252,10 @@ if __name__ == '__main__':
             supported = is_supported_image_format(file)
             if not supported:
                 continue
+            
+            # Placeholder blank line
+            if processed_images > 0:
+                print()
 
             process_image(file)
             processed_images += 1
