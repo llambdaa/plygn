@@ -13,6 +13,7 @@ from contouring import *
 from triangulation import *
 from colorization import *
 from export import *
+from benchmark import *
 
 
 def parse_arguments():
@@ -182,13 +183,16 @@ def process_image(in_path):
     delta = (time() - start).total_seconds()
     print(45 * "-")
     print("Total Time: ".ljust(35), f"{delta}s")
-    export(f"{out_path}/{image_name}", colorized_image, image_data, export_formats, flag_unprocessed)
+
+    output_basename = f"{out_path}/{image_name}"
+    export(output_basename, colorized_image, image_data, export_formats, flag_unprocessed)
 
     # ==========================
     # ||      Benchmarking    ||
     # ==========================
     if flag_benchmark:
-        pass
+        result = benchmark(in_path, output_basename, delta, export_formats, flag_unprocessed)
+        benchmark_results.append(result)
 
 
 def is_supported_image_format(path):
@@ -272,5 +276,5 @@ if __name__ == '__main__':
         benchmark_path = f"{out_path}/benchmark.json"
         with open(benchmark_path, "w+") as benchmark_file:
             json.dump(benchmark_results, benchmark_file, ensure_ascii=False, indent=4)
-            print(f"Benchmark results have been written out to '{benchmark_path}'.")
+            print(f">> Benchmark results have been written out to '{truncate_path(benchmark_path, 3)}'.")
             
