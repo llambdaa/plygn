@@ -84,9 +84,9 @@ def parse_arguments():
 def load_image(path):
     image_name, image_format = os.path.basename(path).split('.', 1)
     if image_format.upper() in ["NEF", "RAW"]:
-        image = rawpy.imread(in_path).postprocess()
+        image = rawpy.imread(path).postprocess()
     else:
-        image = cv2.imread(in_path)
+        image = cv2.imread(path)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     return image_name, image
 
@@ -192,8 +192,12 @@ def process_image(in_path):
 
 
 def is_supported_image_format(path):
-    _, format = os.path.basename(path).split('.', 1)
-    return format, format.upper() in ["NEF", "RAW", "JPG", "JPEG", "PNG", "BMP"]
+    basename = os.path.basename(path)
+    if not "." in basename:
+        return False
+
+    _, format = basename.split('.', 1)
+    return format.upper() in ["NEF", "RAW", "JPG", "JPEG", "PNG", "BMP"]
 
 
 if __name__ == '__main__':
@@ -232,9 +236,10 @@ if __name__ == '__main__':
     if os.path.isfile(in_path):
         # The given path points to a file. The image gets processed
         # if its type is supported, otherwise an error is reported.
-        format, supported = is_supported_image_format(in_path)
+        supported = is_supported_image_format(in_path)
         if not supported:
-            sys.exit(f"Format '{format}' not supported!")
+            sys.exit(f"File '{truncate_path(in_path, 3)}' does not have supported format!")
+
         process_image(in_path)
 
     elif os.path.isdir(in_path):
@@ -244,7 +249,7 @@ if __name__ == '__main__':
         processed_images = 0
         for entry in os.listdir(in_path):
             file = os.path.join(in_path,entry)
-            _, supported = is_supported_image_format(in_path)
+            supported = is_supported_image_format(file)
             if not supported:
                 continue
 
