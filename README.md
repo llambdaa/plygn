@@ -33,7 +33,7 @@ sudo apt-get install python3.10 python3-pip
 sudo pip3 install argparse opencv-python rawpy numpy numba faiss plotly qoi
 ```
 The first execution will be slow. That is, because [numba](https://github.com/numba/numba) compiles some parts of the script
-and caches them on your machine. <br> After that, execution will be considerably faster than before.
+and caches them on your machine. After that, execution will be considerably faster than before.
 
 ## 📒 Usage
 | Short | Long | Choices | Default | Description |
@@ -47,9 +47,10 @@ and caches them on your machine. <br> After that, execution will be considerably
 | -n | --noise-kernel | - | 5 | Kernel size for noise reduction on contours | 
 | -k | --kmeans | - | 8 | Centroid count for kmeans color clustering |
 | -f | --formats | JPG, PNG, QOI | JPG | Export formats | 
+| -B | --benchmark | - | - | Flag for printing and logging compression benchmarks |
 | -P | --plot | - | - | Flag for plotting image in selected color space |
 | -C | --export-contours | - | - | Flag for exporting images of contours |
 | -T | --export-triangulation | - | - | Flag for exporting triangulation of image |
-| -O | --export-original | - | - | Flag for exporting original image in specified export formats |
+| -U | --export-unprocessed | - | - | Flag for exporting unprocessed image in specified formats for comparison |
 
 © llambdaa / Lukas Rapp 2022-23
