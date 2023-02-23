@@ -5,6 +5,7 @@ import os
 import sys
 import rawpy
 import json
+import qoi
 
 from utils import *
 from colorspace import *
@@ -85,11 +86,13 @@ def parse_arguments():
 def load_image(path):
     image_name, image_format = os.path.basename(path).split('.', 1)
     if image_format.upper() in ["NEF", "RAW"]:
-        image = rawpy.imread(path).postprocess()
+        image_data = rawpy.imread(path).postprocess()
+    elif image_format.upper() in ["QOI"]:
+        image_data = qoi.read(path)
     else:
-        image = cv2.imread(path)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    return image_name, image
+        image_data = cv2.imread(path)
+    image_data = cv2.cvtColor(image_data, cv2.COLOR_BGR2RGB)
+    return image_name, image_data
 
 
 def logging_pre(description):
