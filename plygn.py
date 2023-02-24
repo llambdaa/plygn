@@ -5,6 +5,7 @@ import os
 import sys
 import rawpy
 import json
+import qoi
 
 from utils import *
 from colorspace import *
@@ -85,11 +86,125 @@ def parse_arguments():
 def load_image(path):
     image_name, image_format = os.path.basename(path).split('.', 1)
     if image_format.upper() in ["NEF", "RAW"]:
-        image = rawpy.imread(path).postprocess()
+        image_data = rawpy.imread(path).postprocess()
+    elif image_format.upper() in ["QOI"]:
+        image_data = qoi.read(path)
     else:
-        image = cv2.imread(path)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    return image_name, image
+        image_data = cv2.imread(path)
+    image_data = cv2.cvtColor(image_data, cv2.COLOR_BGR2RGB)
+    return image_name, image_data
+
+
+def logging_pre(description):
+    global logging_desc
+    global logging_time
+    logging_desc = description
+    logging_time = time()
+    print(f"{logging_step}. {description}", end='\r')
+
+
+def logging_post():
+    global logging_step
+    delta = (time() - logging_time).total_seconds()
+    print(f"{logging_step}. {logging_desc}".ljust(35), f"{delta}s")
+    logging_step += 1
+
+
+def process_image(in_path):
+    # =============================
+    # ||      Image Loading      ||
+    # =============================
+    image_name, image_data = load_image(in_path)
+    print(f"Processing '{truncate_path(in_path, 3)}'")
+    start = time()
+
+    # ======================================
+    # ||      Color Space Operations      ||
+    # ======================================
+    logging_pre("Color Space Transformation")
+    image_as_ints, unique_ints, unique_colors, unique_counts = dedupe_colors(image_data)
+    translated_unique_colors = to_space(unique_colors, colorspace)
+    logging_post()
+
+    if flag_plot is True:
+        logging_pre("Plotting")
+        plot(unique_colors, translated_unique_colors)
+        logging_post()
+
+    logging_pre("Color Clustering")
+    labels = kmeans(kmeans_centroids, translated_unique_colors, unique_counts)
+    labels = expand_labels(image_as_ints, unique_ints, labels, image_data.shape)
+    logging_post()
+
+    # ==================================
+    # ||      Contour Operations      ||
+    # ==================================
+    logging_pre("Contouring")
+    contours = find_contours(image_data, kmeans_centroids, labels, noise_kernel)
+    logging_post()
+
+    if flag_contours is True:
+        logging_pre("Exporting Contours")
+        partial_folder = make_folder(out_path, image_name)
+        export_folder = make_folder(partial_folder, colorspace)
+        export_contours(image_data, contours, export_folder)
+        logging_post()
+
+    logging_pre("Vertex Search")
+    vertices = find_vertices(contours, distance)
+    logging_post()
+
+    # ===================================
+    # ||      Triangle Operations      ||
+    # ===================================
+    logging_pre("Triangulation")
+    triangulation = find_triangulation(image_data.shape, vertices)
+    logging_post()
+
+    if splitting > 0:
+        logging_pre("Triangle Splitting")
+        triangulation = split_triangulation(triangulation, splitting)
+        logging_post()
+
+    if flag_triangulation is True:
+        logging_pre("Exporting Triangulation")
+        partial_folder = make_folder(out_path, image_name)
+        export_folder = make_folder(partial_folder, colorspace)
+        export_triangulation(image_data, triangulation, export_folder)
+        logging_post()
+
+    # ============================
+    # ||      Colorization      ||
+    # ============================
+    logging_pre("Triangle Colorization")
+    colorized_image = colorize(image_data, triangulation)
+    logging_post()
+
+    # ============================
+    # ||      Finalization      ||
+    # ============================
+    delta = (time() - start).total_seconds()
+    print(45 * "-")
+    print("Total Time: ".ljust(35), f"{delta}s")
+
+    output_basename = f"{out_path}/{image_name}"
+    export(output_basename, colorized_image, image_data, export_formats, flag_unprocessed)
+
+    # ==========================
+    # ||      Benchmarking    ||
+    # ==========================
+    if flag_benchmark:
+        result = benchmark(in_path, output_basename, delta, export_formats, flag_unprocessed)
+        benchmark_results.append(result)
+
+
+def is_supported_image_format(path):
+    basename = os.path.basename(path)
+    if not "." in basename:
+        return False
+
+    _, format = basename.split('.', 1)
+    return format.upper() in ["NEF", "RAW", "JPG", "JPEG", "PNG", "BMP"]
 
 
 def logging_pre(description):
