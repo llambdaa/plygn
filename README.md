@@ -1,19 +1,9 @@
 # plygn
 
-<p align="center">
-  Triangulation-based image abstraction for compression and artistic image generation.
-</p>
-  
----
-  
-This is a research project for my Bachelor's CS degree. Technically... I have to do it. But the topic was
-my choice and thus it was done with a lot of love! If you have any suggestions or ideas, feel free to
-tell me!
-
-| :warning: | Contributions from others are not accepted for now. The project is formally still running and I later have to assure that I have done the work myself! After my studies, the project will be open for collaboration! |
+| :warning: | This is a research project for my bachelor's degree. Contributions from others are not accepted for now. The project is formally ongoing and I will later need to assure I have completed the work myself. After finishing my studies, the project will be open for collaboration. |
 |-----------|:----------|
 
-## About
+## ⓘ About
 Initially, this project was intended for generation of so-called [Low Poly Art](https://www.google.com/search?q=low+poly+art) from a given image - hence the name **plygn**. However, as that functionality was implemented, it became apparent that by approximating an image using triangles, data redundancy is
 generated, because all pixels in a triangle have the same color. That redundancy could then be picked up by various image compression
 algorithms (or formats) to compress the image even more.
