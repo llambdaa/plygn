@@ -1,23 +1,32 @@
 import os
 import torch
 import numpy as np
+import json
 
 from plygn import load_image
 from export import *
-from enum import Enum
+from enum import Enum, auto
 from pytorch_msssim import ms_ssim
 
 
-class PartialResultType(Enum):
-    PROCESSED = "processed"
+BENCHMARK_PATH = f"{{0}}/benchmark.json"
+
+
+class ResultType(Enum):
+    PROCESSED   = "processed"
     UNPROCESSED = "unprocessed"
 
     def __str__(self):
         return self.value
 
 
-def get_image_tensor(input_path):
-    _, image = load_image(input_path)
+class MeasurementType(Enum):
+    SIMPLE      = auto()
+    COMPARATIVE = auto()
+
+
+def get_image(input):
+    _, image = load_image(input)
     image = np.transpose(image, (2, 0, 1))
     image = np.expand_dims(image, axis=0)
     image = image.astype(np.float32)
@@ -25,74 +34,76 @@ def get_image_tensor(input_path):
     return image
 
 
-def write_partial_result(path, partial_result_type, original_data, format_result):
-    path = path.format(partial_result_type)
-    image = get_image_tensor(path)
-    size = os.path.getsize(path)
-    original_image = original_data[0]
-    original_size = original_data[1]
-    similarity_to_original = ms_ssim(original_image, image, data_range=255).item()
-
-    partial_result = {
-        "path": path,
-        "size": size,
-        "size_ratio_to_original": size / original_size,
-        "similarity_to_original": similarity_to_original
-    }
-
-    format_result[str(partial_result_type)] = partial_result
-
-
-def write_partial_result_comparison(format_result):
-    processed_result = format_result[str(PartialResultType.PROCESSED)]
-    unprocessed_result = format_result[str(PartialResultType.UNPROCESSED)]
-
-    # Both image format conversion/compression with and without
-    # prior triangulation are performed. Both partial results
-    # can now be compared in terms of size and similarity with
-    # respect to the shared common original.
-    processed_size = processed_result["size"]
-    unprocessed_size = unprocessed_result["size"]
-    format_result["size_impact"] = processed_size / unprocessed_size
-
-    processed_similarity = processed_result["similarity_to_original"]
-    unprocessed_similarity = unprocessed_result["similarity_to_original"]
-    format_result["similarity_impact"] = processed_similarity / unprocessed_similarity
-
-
-def get_format_result(format_path, flag_unprocessed, original_data):
-    format_result = {}
-
-    # Input Image ---> Processed Image ---> PNG/JPG/QOI
-    write_partial_result(format_path, PartialResultType.PROCESSED, original_data, format_result)
-
-    # Input Image ---> PNG/JPG/QOI
-    if flag_unprocessed:
-        write_partial_result(format_path, PartialResultType.UNPROCESSED, original_data, format_result)
-        write_partial_result_comparison(format_result)
-
-    return format_result
-
-
-def benchmark(input_path, output_path, time, formats, flag_unprocessed):
-    benchmark_result = {}
-    
-    # Base Information
-    original_image = get_image_tensor(input_path)
-    original_size = os.path.getsize(input_path)
-    original_data = (original_image, original_size)
-    original_object = {
-        "path": input_path,
+def get_measurement_header(input, original_size, time):
+    header = {
+        "path": input,
         "size": original_size,
         "time": time
     }
-    benchmark_result["original"] = original_object
+    return header
 
-    # Format Specific Information
+
+def get_measurement(path, original_image, original_size):
+    result_image = get_image(path)
+    result_size = os.path.getsize(path)
+    similarity = ms_ssim(original_image, result_image, data_range=255).item()
+    compression = 1 - (result_size / original_size)
+
+    measurement = {
+        "path": path,
+        "size": result_size,
+        "similarity": similarity,
+        "compression": compression,
+    }
+    return measurement
+
+
+def get_comparison(processed_measurement, unprocessed_measurement):
+    processed_size = processed_measurement["size"]
+    unprocessed_size = unprocessed_measurement["size"]
+    size_impact = processed_size / unprocessed_size
+
+    processed_sim = processed_measurement["similarity"]
+    unprocessed_sim = unprocessed_measurement["similarity"]
+    similarity_impact = processed_sim / unprocessed_sim
+
+    comparison = {
+        "size_impact": size_impact,
+        "similarity_impact": similarity_impact
+    }
+    return comparison
+
+
+def get_format_entry(output, format, measurement_type, original_image, original_size):
+    format_suffix = str(format).lower()
+    path_template = f"{output}_{{0}}.{format_suffix}"
+    format_entry = {}
+
+    processed_path = path_template.format(ResultType.PROCESSED)
+    processed_measurement = get_measurement(processed_path, original_image, original_size)
+    format_entry[str(ResultType.PROCESSED)] = processed_measurement
+
+    if (measurement_type is MeasurementType.COMPARATIVE):
+        unprocessed_path = path_template.format(ResultType.UNPROCESSED)
+        unprocessed_measurement = get_measurement(unprocessed_path, original_image, original_size)
+        format_entry[str(ResultType.UNPROCESSED)] = unprocessed_measurement
+
+        comparison = get_comparison(processed_measurement, unprocessed_measurement)
+        format_entry["comparison"] = comparison
+
+    return format_entry
+
+
+def get_benchmark_entry(input, output, formats, measurement_type, time):
+    original_image = get_image(input)
+    original_size = os.path.getsize(input)
+    benchmark_entry = {}
+
+    header = get_measurement_header(input, original_size, time)
+    benchmark_entry["header"] = header
+
     for format in formats:
-        format_name = str(format).lower()
-        format_path = f"{output_path}_{{0}}.{format_name}"
-        format_result = get_format_result(format_path, flag_unprocessed, original_data)
-        benchmark_result[format_name] = format_result
+        format_entry = get_format_entry(output, format, measurement_type, original_image, original_size)
+        benchmark_entry[str(format)] = format_entry
 
-    return benchmark_result
+    return benchmark_entry
