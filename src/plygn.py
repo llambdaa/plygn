@@ -306,7 +306,7 @@ def process_image(in_path):
     # ||      Benchmarking    ||
     # ==========================
     if flag_benchmark:
-        result = get_benchmark_entry(in_path, output_basename, export_formats, flag_unprocessed, delta)
+        result = get_benchmark_entry(in_path, output_basename, export_formats, MeasurementType.COMPARATIVE, delta)
         benchmark_results.append(result)
 
 

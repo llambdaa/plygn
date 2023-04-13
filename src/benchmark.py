@@ -61,15 +61,15 @@ def get_measurement(path, original_image, original_size):
 def get_comparison(processed_measurement, unprocessed_measurement):
     processed_size = processed_measurement["size"]
     unprocessed_size = unprocessed_measurement["size"]
-    size_impact = processed_size / unprocessed_size
+    size_impact = 1 - (processed_size / unprocessed_size)
 
     processed_sim = processed_measurement["similarity"]
     unprocessed_sim = unprocessed_measurement["similarity"]
-    similarity_impact = processed_sim / unprocessed_sim
+    similarity_impact = 1 - (processed_sim / unprocessed_sim)
 
     comparison = {
-        "size_impact": size_impact,
-        "similarity_impact": similarity_impact
+        "better_size": size_impact,
+        "worse_similarity": similarity_impact
     }
     return comparison
 
