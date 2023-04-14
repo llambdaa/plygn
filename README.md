@@ -28,19 +28,19 @@ and caches them on your machine. After that, execution will be considerably fast
 ## 📒 Usage
 | Short | Long | Choices | Default | Description |
 | ----- | ---- | ------- | ------- | ----------- |
-| -i | --input | - | - | Path to input image |
-| -o | --output | - | - | Path to output image |
-| -c | --colorspace | RGB, HSL, HSV | RGB | Color space for clustering image data |
-| -d | --distance | - | 10 | Preferred vertex distance |
-| -s | --splitting | - | -1 | Maximum triangle area before splitting into smaller triangles |
-| -v | --variance | - | 1 | Maximum allowed color variance for a triangle to be drawn | 
-| -n | --noise-kernel | - | 5 | Kernel size for noise reduction on contours | 
-| -k | --kmeans | - | 8 | Centroid count for kmeans color clustering |
-| -f | --formats | JPG, PNG, QOI | JPG | Export formats | 
-| -B | --benchmark | - | - | Flag for printing and logging compression benchmarks |
-| -P | --plot | - | - | Flag for plotting image in selected color space |
-| -C | --export-contours | - | - | Flag for exporting images of contours |
-| -T | --export-triangulation | - | - | Flag for exporting triangulation of image |
-| -U | --export-unprocessed | - | - | Flag for exporting unprocessed image in specified formats for comparison |
+| -i | --input | - | - | Path to input image. |
+| -o | --output | - | - | Path to output image. |
+| -c | --colorspace | RGB, HSL, HSV | RGB | Color space for clustering image data. |
+| -d | --distance | - | 10 | Preferred vertex distance. |
+| -s | --splitting | - | -1 | Maximum triangle area before splitting into smaller triangles. |
+| -v | --variance | - | 1 | Maximum allowed color variance for a triangle to be drawn. | 
+| -n | --noise-kernel | - | 5 | Kernel size for noise reduction on contours. | 
+| -k | --kmeans | - | 8 | Centroid count for kmeans color clustering. |
+| -f | --formats | JPG, PNG, QOI | JPG | Export formats. | 
+| -B | --benchmark | - | - | Flag for printing and logging compression benchmarks. |
+| -P | --plot | - | - | Flag for plotting image in selected color space. |
+| -C | --export-contours | - | - | Flag for exporting images of contours. |
+| -T | --export-triangulation | - | - | Flag for exporting triangulation of image. |
+| -U | --export-unprocessed | - | - | Flag for exporting unprocessed image in specified formats for comparison. When combined with -B, richer benchmarks are generated. |
 
 © llambdaa / Lukas Rapp 2022-23
