@@ -3,8 +3,9 @@ import torch
 import numpy as np
 import json
 
-from plygn import load_image
 from export import *
+from plygn import load_image
+from utils import *
 from enum import Enum, auto
 from pytorch_msssim import ms_ssim
 
@@ -107,3 +108,10 @@ def get_benchmark_entry(input, output, formats, measurement_type, time):
         benchmark_entry[str(format)] = format_entry
 
     return benchmark_entry
+
+
+def write_benchmarks(output, benchmarks):
+    path = BENCHMARK_PATH.format(output)
+    with open(path, "w+") as benchmark_file:
+        json.dump(benchmarks, benchmark_file, ensure_ascii=False, indent=4)
+        print(f"Benchmarks have been written to '{truncate_path(path, 3)}'")
