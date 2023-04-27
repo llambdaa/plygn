@@ -81,7 +81,7 @@ def get_measurement(path, original_image):
 
     measurement = {
         "path": path,
-        "size": result_size,
+        "size": result_mem,
         "psnr": psnr,
         "msssim": msssim,
         "bpp": (result_mem / result_size)
