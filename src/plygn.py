@@ -203,7 +203,7 @@ def process_image(in_path, out_path):
     print(45 * "-")
     print("Total Time: ".ljust(35), f"{delta}s")
 
-    output_basename = f"{output_path}/{image_name}"
+    output_basename = f"{out_path}/{image_name}"
     export(output_basename, colorized_image, image_data, export_formats, flag_unprocessed)
 
     # ==========================
@@ -211,7 +211,7 @@ def process_image(in_path, out_path):
     # ==========================
     if flag_benchmark:
         measurement_type = MeasurementType.SIMPLE if not flag_unprocessed else MeasurementType.COMPARATIVE
-        benchmark = get_benchmark_entry(input_path, output_basename, export_formats, measurement_type, delta)
+        benchmark = get_benchmark_entry(in_path, output_basename, export_formats, measurement_type, delta)
         add_benchmark(benchmark)
 
 
@@ -226,7 +226,9 @@ def process_images(targets, out_path):
 
         process_image(file, out_path)
         processed_images += 1
-        logging_step.counter = 1
+
+        global logging_step
+        logging_step = 1
 
     return processed_images
 
@@ -261,7 +263,6 @@ if __name__ == '__main__':
 
     elif os.path.isdir(input_path):
         targets = [os.path.join(input_path, entry) for entry in os.listdir(input_path)]
-        print(targets)
         processed_images = process_images(targets, output_path)
         print(f"[ {processed_images} images have been processed! ]")
             
