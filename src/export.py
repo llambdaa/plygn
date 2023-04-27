@@ -16,13 +16,15 @@ def export(path, processed, unprocessed, export_formats, export_unprocessed):
     if ExportFormat.JPG in export_formats:
         cv2.imwrite(
             f"{path}_processed.jpg",
-            cv2.cvtColor(processed, cv2.COLOR_RGB2BGR)
+            cv2.cvtColor(processed, cv2.COLOR_RGB2BGR),
+            [int(cv2.IMWRITE_JPEG_QUALITY), 90]
         )
 
         if export_unprocessed:
             cv2.imwrite(
                 f"{path}_unprocessed.jpg",
-                cv2.cvtColor(unprocessed, cv2.COLOR_RGB2BGR)
+                cv2.cvtColor(unprocessed, cv2.COLOR_RGB2BGR),
+                [int(cv2.IMWRITE_JPEG_QUALITY), 90]
             )
 
     if ExportFormat.PNG in export_formats:
