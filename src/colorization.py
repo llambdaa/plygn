@@ -17,9 +17,6 @@ def colorize(image, triangulation, variance):
     # components for barycentric coordinate calculations
     v0x, v0y, v1x, v1y, inv_den = find_barycentric_components(triangulation)
 
-    too_high = 0
-    too_low = 0
-
     for i, (t_ax, t_ay, t_bx, t_by, t_cx, t_cy) in enumerate(triangulation):
         t_xmin, t_xmax = xmin[i], xmax[i]
         t_ymin, t_ymax = ymin[i], ymax[i]
@@ -91,11 +88,7 @@ def colorize(image, triangulation, variance):
         # The variance is too high (the maximum distance from any
         # color in the triangle to the average color is too high)
         if variance_too_high:
-            too_high += 1;
             continue
-
-        if not variance_too_high:
-            too_low += 1
 
         # The average color is then written
         # to each point in the triangle.
@@ -103,9 +96,7 @@ def colorize(image, triangulation, variance):
             for iy, y in enumerate(range(t_ymin, t_ymax + 1)):
                 if inside[iy][ix] == 1:
                     canvas[y][x] = color
-
-    print(f"Too High: {too_high}")
-    print(f"Not Too High: {too_low}")
+                    
     return canvas
 
 
