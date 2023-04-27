@@ -215,7 +215,7 @@ def process_image(in_path, out_path):
         add_benchmark(benchmark)
 
 
-def process_images(targets):
+def process_images(targets, out_path):
     processed_images = 0
     for file in targets:
         if not is_supported_image_format(file):
@@ -224,27 +224,11 @@ def process_images(targets):
         if processed_images > 0:
             print()
 
-        process_image(file)
+        process_image(file, out_path)
         processed_images += 1
         logging_step.counter = 1
 
     return processed_images
-
-
-def process():
-    if not os.path.exists(input_path):
-        sys.exit(f"Target '{input_path}' has not been found!")
-
-    if os.path.isfile(input_path):
-        if not is_supported_image_format(input_path):
-            sys.exit(f"File '{truncate_path(input_path, 3)}' does not have a supported format!")
-            
-        process_image(input_path)
-
-    elif os.path.isdir(input_path):
-        targets = [os.path.join(input_path, entry) for entry in os.listdir(input_path)]
-        processed_images = process_images(targets)
-        print(f"{processed_images} images have been processed!")
 
 
 if __name__ == '__main__':
@@ -277,6 +261,7 @@ if __name__ == '__main__':
 
     elif os.path.isdir(input_path):
         targets = [os.path.join(input_path, entry) for entry in os.listdir(input_path)]
-        processed_images = process_images(targets)
+        print(targets)
+        processed_images = process_images(targets, output_path)
         print(f"[ {processed_images} images have been processed! ]")
             
