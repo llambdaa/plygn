@@ -126,7 +126,7 @@ def add_benchmark(benchmark):
     write_benchmarks(output_path, benchmark_results)
 
 
-def process_image(in_path):
+def process_image(in_path, out_path):
     # =============================
     # ||      Image Loading      ||
     # =============================
@@ -193,7 +193,7 @@ def process_image(in_path):
     # ||      Colorization      ||
     # ============================
     logging_pre("Triangle Colorization")
-    colorized_image = colorize(image_data, triangulation)
+    colorized_image = colorize(image_data, triangulation, variance)
     logging_post()
 
     # ============================
@@ -273,7 +273,7 @@ if __name__ == '__main__':
         if not is_supported_image_format(input_path):
             sys.exit(f"File '{truncate_path(input_path, 3)}' does not have a supported format!")
             
-        process_image(input_path)
+        process_image(input_path, output_path)
 
     elif os.path.isdir(input_path):
         targets = [os.path.join(input_path, entry) for entry in os.listdir(input_path)]

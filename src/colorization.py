@@ -1,10 +1,11 @@
 import numpy as np
+import math
 
 from numba import njit
 
 
 @njit(cache=True, nogil=True)
-def colorize(image, triangulation):
+def colorize(image, triangulation, variance):
     canvas = image.copy()
 
     # Triangle coordinates are converted to discrete
@@ -15,6 +16,9 @@ def colorize(image, triangulation):
     # Vectorized calculation of only triangle-dependent
     # components for barycentric coordinate calculations
     v0x, v0y, v1x, v1y, inv_den = find_barycentric_components(triangulation)
+
+    too_high = 0
+    too_low = 0
 
     for i, (t_ax, t_ay, t_bx, t_by, t_cx, t_cy) in enumerate(triangulation):
         t_xmin, t_xmax = xmin[i], xmax[i]
@@ -37,14 +41,22 @@ def colorize(image, triangulation):
         w = (t_v0x * t_v2y - t_v2x * t_v0y) * t_inv_den
         u = v + w
 
+        # For each position in the bounding box, that lies within
+        # the triangle, a condensed decision variable is set.
+        inside = np.zeros((t_height, t_width))
+        for ix, x in enumerate(range(t_xmin, t_xmax + 1)):
+            for iy, y in enumerate(range(t_ymin, t_ymax + 1)):
+                if v[iy][ix] >= 0 and w[iy][ix] >= 0 and u[iy][ix] <= 1:
+                    inside[iy][ix] = 1
+
         # Each position in the bounding box, where the condition
         # is met (so that the point lies within the triangle), is
-        # iterated, collecting the color values into separate
+        # iterated over, collecting the color values into separate
         # accumulators. Then, the color average is calculated.
         r_total, g_total, b_total, size = 0, 0, 0, 0
         for ix, x in enumerate(range(t_xmin, t_xmax + 1)):
             for iy, y in enumerate(range(t_ymin, t_ymax + 1)):
-                if v[iy][ix] >= 0 and w[iy][ix] >= 0 and u[iy][ix] <= 1:
+                if inside[iy][ix] == 1:
                     r, g, b = image[y][x]
                     r_total += r
                     g_total += g
@@ -62,13 +74,38 @@ def colorize(image, triangulation):
         b_avg = int(b_total / size)
         color = np.array([r_avg, g_avg, b_avg])
 
+        # If the color variance with regards to the average color
+        # is too large, the triangle shall not be painted in.
+        variance_too_high = False
+        if variance > 0:
+            for ix, x in enumerate(range(t_xmin, t_xmax + 1)):
+                for iy, y in enumerate(range(t_ymin, t_ymax + 1)):
+                    if inside[iy][ix] == 1:
+                        r1, g1, b1 = image[y][x]
+                        r2, g2, b2 = color
+
+                        distance = math.sqrt((r1 - r2)**2 + (g1 - g2)**2 + (b1 - b2)**2)
+                        if distance > variance:
+                            variance_too_high = True
+
+        # The variance is too high (the maximum distance from any
+        # color in the triangle to the average color is too high)
+        if variance_too_high:
+            too_high += 1;
+            continue
+
+        if not variance_too_high:
+            too_low += 1
+
         # The average color is then written
         # to each point in the triangle.
         for ix, x in enumerate(range(t_xmin, t_xmax + 1)):
             for iy, y in enumerate(range(t_ymin, t_ymax + 1)):
-                if v[iy][ix] >= 0 and w[iy][ix] >= 0 and u[iy][ix] <= 1:
+                if inside[iy][ix] == 1:
                     canvas[y][x] = color
 
+    print(f"Too High: {too_high}")
+    print(f"Not Too High: {too_low}")
     return canvas
 
 
