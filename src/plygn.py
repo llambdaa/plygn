@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import argparse
 import cv2
-import json
 import os
 import qoi
 import rawpy
@@ -196,22 +195,24 @@ def process_image(in_path, out_path):
     colorized_image = colorize(image_data, triangulation, variance)
     logging_post()
 
-    # ============================
-    # ||      Finalization      ||
-    # ============================
-    delta = (time() - start).total_seconds()
+    processing_time = (time() - start).total_seconds()
     print(45 * "-")
-    print("Total Time: ".ljust(35), f"{delta}s")
+    print("Processing Time: ".ljust(35), f"{processing_time}s")
 
-    output_basename = f"{out_path}/{image_name}"
+    # ======================
+    # ||      Export      ||
+    # ======================
+    output_basename = os.path.normpath(f"{out_path}/{image_name}")
     export(output_basename, colorized_image, image_data, export_formats, flag_unprocessed)
+    total_time = (time() - start).total_seconds()
+    print("Total Time: ".ljust(35), f"{total_time}s")
 
     # ==========================
     # ||      Benchmarking    ||
     # ==========================
     if flag_benchmark:
         measurement_type = MeasurementType.SIMPLE if not flag_unprocessed else MeasurementType.COMPARATIVE
-        benchmark = get_benchmark_entry(in_path, output_basename, export_formats, measurement_type, delta)
+        benchmark = get_benchmark_entry(in_path, output_basename, export_formats, measurement_type, processing_time, total_time)
         add_benchmark(benchmark)
 
 
@@ -222,7 +223,7 @@ def process_images(targets, out_path):
             continue
 
         if processed_images > 0:
-            print()
+            print("\n{}\n".format("=" * 60))
 
         process_image(file, out_path)
         processed_images += 1

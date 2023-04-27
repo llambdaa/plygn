@@ -2,6 +2,7 @@ import os
 import torch
 import numpy as np
 import json
+import cv2
 
 from export import *
 from plygn import load_image
@@ -26,85 +27,123 @@ class MeasurementType(Enum):
     COMPARATIVE = auto()
 
 
-def get_image(input):
+def get_numpy_image(input):
     _, image = load_image(input)
     image = np.transpose(image, (2, 0, 1))
     image = np.expand_dims(image, axis=0)
     image = image.astype(np.float32)
-    image = torch.from_numpy(image)
     return image
 
 
-def get_measurement_header(input, original_size, time):
-    header = {
-        "path": input,
-        "size": original_size,
-        "time": time
+def to_torch_image(numpy_image):
+    return torch.from_numpy(numpy_image)
+    
+
+def get_pixel_size(image):
+    _, _, height, width = image.shape
+    return height * width
+
+
+def get_measurement_reference(input, original_size, original_mem, processing_time, total_time):
+    reference = {
+        "path_original": input,
+        "size_original": original_mem,
+        "time_processing": processing_time,
+        "time_total": total_time,
+        "bpp": (original_mem / original_size)
     }
-    return header
+    return reference
 
 
-def get_measurement(path, original_image, original_size):
-    result_image = get_image(path)
-    result_size = os.path.getsize(path)
-    similarity = ms_ssim(original_image, result_image, data_range=255).item()
-    compression = 1 - (result_size / original_size)
+def measure(original, compressed):
+    print("SIM1. PSNR", end="\r")
+    start = time()
+    similarity_psnr = cv2.PSNR(original, compressed)
+    delta = (time() - start).total_seconds()
+    print(f"SIM1. PSNR".ljust(35), f"{delta}s")
+
+    print("SIM2. MS-SSIM", end="\r")
+    start = time()
+    original = to_torch_image(original)
+    compressed = to_torch_image(compressed)
+    similarity_msssim = ms_ssim(original, compressed, data_range=255, size_average=False).item()
+    delta = (time() - start).total_seconds()
+    print(f"SIM2. MS_SSIM".ljust(35), f"{delta}s")
+
+    return similarity_psnr, similarity_msssim
+
+
+def get_measurement(path, original_image):
+    result_image = get_numpy_image(path)
+    result_size = get_pixel_size(result_image)
+    result_mem = os.path.getsize(path)
+    psnr, msssim = measure(original_image, result_image)
 
     measurement = {
         "path": path,
         "size": result_size,
-        "similarity": similarity,
-        "compression": compression,
+        "psnr": psnr,
+        "msssim": msssim,
+        "bpp": (result_mem / result_size)
     }
     return measurement
 
 
-def get_comparison(processed_measurement, unprocessed_measurement):
-    processed_size = processed_measurement["size"]
-    unprocessed_size = unprocessed_measurement["size"]
-    size_impact = 1 - (processed_size / unprocessed_size)
+def get_impact(processed_measurement, unprocessed_measurement):
+    processed_psnr = processed_measurement["psnr"]
+    unprocessed_psnr = unprocessed_measurement["psnr"]
+    impact_psnr = processed_psnr - unprocessed_psnr
 
-    processed_sim = processed_measurement["similarity"]
-    unprocessed_sim = unprocessed_measurement["similarity"]
-    similarity_impact = 1 - (processed_sim / unprocessed_sim)
+    processed_msssim = processed_measurement["msssim"]
+    unprocessed_msssim = unprocessed_measurement["msssim"]
+    impact_msssim = processed_msssim - unprocessed_msssim
 
-    comparison = {
-        "better_size": size_impact,
-        "worse_similarity": similarity_impact
+    processed_bpp = processed_measurement["bpp"]
+    unprocessed_bpp = unprocessed_measurement["bpp"]
+    impact_bpp = (1 - (processed_bpp / unprocessed_bpp)) * 100
+
+    impact = {
+        "psnr": impact_psnr,
+        "msssim": impact_msssim,
+        "bpp": impact_bpp
     }
-    return comparison
+    return impact
 
 
-def get_format_entry(output, format, measurement_type, original_image, original_size):
+def get_format_entry(output, format, measurement_type, original_image):
     format_suffix = str(format).lower()
     path_template = f"{output}_{{0}}.{format_suffix}"
     format_entry = {}
 
+    print("> Processed:")
     processed_path = path_template.format(ResultType.PROCESSED)
-    processed_measurement = get_measurement(processed_path, original_image, original_size)
+    processed_measurement = get_measurement(processed_path, original_image)
     format_entry[str(ResultType.PROCESSED)] = processed_measurement
 
     if (measurement_type is MeasurementType.COMPARATIVE):
+        print("> Unprocessed:")
         unprocessed_path = path_template.format(ResultType.UNPROCESSED)
-        unprocessed_measurement = get_measurement(unprocessed_path, original_image, original_size)
+        unprocessed_measurement = get_measurement(unprocessed_path, original_image)
         format_entry[str(ResultType.UNPROCESSED)] = unprocessed_measurement
 
-        comparison = get_comparison(processed_measurement, unprocessed_measurement)
-        format_entry["comparison"] = comparison
+        impact = get_impact(processed_measurement, unprocessed_measurement)
+        format_entry["impact"] = impact
 
     return format_entry
 
 
-def get_benchmark_entry(input, output, formats, measurement_type, time):
-    original_image = get_image(input)
-    original_size = os.path.getsize(input)
+def get_benchmark_entry(input, output, formats, measurement_type, processing_time, total_time):
+    print("\nBenchmarking:")
+    original_image = get_numpy_image(input)
+    original_size = get_pixel_size(original_image)
+    original_mem = os.path.getsize(input)
     benchmark_entry = {}
 
-    header = get_measurement_header(input, original_size, time)
-    benchmark_entry["header"] = header
+    reference = get_measurement_reference(input, original_size, original_mem, processing_time, total_time)
+    benchmark_entry["reference"] = reference
 
     for format in formats:
-        format_entry = get_format_entry(output, format, measurement_type, original_image, original_size)
+        format_entry = get_format_entry(output, format, measurement_type, original_image)
         benchmark_entry[str(format)] = format_entry
 
     return benchmark_entry
@@ -114,4 +153,5 @@ def write_benchmarks(output, benchmarks):
     path = BENCHMARK_PATH.format(output)
     with open(path, "w+") as benchmark_file:
         json.dump(benchmarks, benchmark_file, ensure_ascii=False, indent=4)
-        print(f"Benchmarks have been written to '{truncate_path(path, 3)}'")
+        print("\nBenchmarks have been written to:")
+        print(truncate_path(path, 3))
