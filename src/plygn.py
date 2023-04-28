@@ -82,6 +82,11 @@ def parse_arguments():
     return parser.parse_args()
 
 
+def write_parameter_hint(path):
+    with open(f"{path}/parameters.txt", 'w') as file:
+        file.write(' '.join(sys.argv))
+
+
 def is_supported_image_format(path):
     basename = os.path.basename(path)
     if not "." in basename:
@@ -256,6 +261,7 @@ if __name__ == '__main__':
     if not os.path.exists(input_path):
         sys.exit(f"Target '{input_path}' has not been found!")
 
+    write_parameter_hint(output_path)
     if os.path.isfile(input_path):
         if not is_supported_image_format(input_path):
             sys.exit(f"File '{truncate_path(input_path, 3)}' does not have a supported format!")
